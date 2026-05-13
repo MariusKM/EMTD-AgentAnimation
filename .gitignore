@@ -62,11 +62,7 @@ node_modules/
 *.swo
 *.code-workspace
 
-# Working PSDs / scratch images / ad-hoc comparisons (explicitly named,
-# kept out of tracking regardless of binary policy)
-HeroAnimation/HeroScreen.psd
-HeroAnimation/photo_*.jpg
-/Scale_Compare.*
+
 
 # Environment / secrets
 .env
