@@ -4,7 +4,7 @@
 > Companion to [README.md](README.md) (project overview) and [Archer_Progression_Plan.md](Archer_Progression_Plan.md) (the ramp itself).
 > All learnings dated 2026-05-04 unless noted otherwise.
 
-> **Skill-driven pipeline.** Run via `/unit-progression Archer`. The agent uploads inputs, builds payloads, POSTs to the FAL queue directly (`curl`/`python` per § Part 1 § A), writes sidecars, polls, downloads, runs NAFNet + composite-keeper from the shell (§ Part 4 recipes).
+> **Skill-driven pipeline.** Run via `/unit-progression Archer`. The agent uploads inputs, builds payloads, POSTs to the FAL queue directly (`curl`/`python` per § Part 1 § A), writes sidecars, polls, downloads, runs the cleanup pass (default ESRGAN 2× → 1024 downscale; NAFNet deblur as fallback) + composite-keeper from the shell (§ Part 4 recipes).
 
 ---
 
@@ -22,7 +22,7 @@ out/v<N>/L<n>/
 Conventions:
 - The `variants/` dir holds ONLY the four raw downloads — never the composite, never the denoise. Keeps "the four candidates the user picks from" unambiguous.
 - The `sidecars/` dir holds the audit JSONs. In reproducible mode (`num_images: 1` × 4 parallel calls) there are four sidecars, one per seed. In fast mode (`num_images: 4` × 1 call) there's a single sidecar covering all four outputs.
-- The `composite/` dir is created only after a keeper is locked. It holds the composited keeper (chain input for the next level), the QC review image, the QC metrics JSON, and any post-composite NAFNet deblur pass.
+- The `composite/` dir is created only after a keeper is locked. It holds the composited keeper (chain input for the next level), the QC review image, the QC metrics JSON, and the cleaned-up raw keeper (`_denoise.png` — produced by ESRGAN 2× at 2048×2048 by default, or NAFNet deblur as fallback applied to the ESRGAN-upscaled raw so it stays at 2K). The whole chain runs at 2K throughout (LOCKED 2026-05-13).
 - Tier-break A/B comparisons (anchored vs chained) use parallel sibling dirs: `out/v<N>/L<n>/` vs `out/v<N>/L<n>_chained/`, each with the same three-child layout.
 - v0 and v1 used a flat layout (PNGs and sidecars side-by-side in the level dir). Don't reorganize them retroactively — the layout convention applies to v2 and forward.
 
@@ -242,21 +242,26 @@ Historical note: the multi-image setup did pixel-lock the framing (74.7% / 13.5%
 | **First gold accent at a level lands as warm-tinted highlight, not distinct gold** | Infantry L8 (gold pauldron seam rivets — barely readable across all 4 variants at thumbnail scale) | Lead with explicit "polished metal" language: "BUTTERY POLISHED YELLOW GOLD METAL, saturated warm-yellow hue contrasting strongly against the cool silver-gray steel, distinctly more yellow than the surrounding steel — NOT brass, NOT bronze, NOT yellow paint, NOT mustard tint, NOT a warm-tinted highlight on steel." Add explicit rendering hints: "(i) saturated buttery-yellow base, (ii) soft top-down highlight that reads almost white-yellow, (iii) deeper warm shadow on the underside that reads honey-orange." Each gold element must be IMMEDIATELY READABLE as gold at thumbnail scale. Soft fail at L8 → re-emphasized at L9 with this language → landed cleanly. Apply this language any time gold appears in a prompt. |
 | **Soft-fail features land subtly and need re-emphasis at the next level** | Infantry L4 (only 2 of 3 iron mace banding rings visible) → carried forward to L5; Infantry L8 (gold rivets faint) → carried forward to L9 | When a level's keeper landed a feature subtly (or failed it on 1-2 of the 4 variants), re-assert the underdelivered feature in the NEXT level's PRESERVE block AND its CRITICAL PRESERVATION VERIFICATION lead. Authoring rule: when locking a keeper with a soft-fail, log it in the next prompt's `_meta.history` as an audit note, and write the feature back into the prompt body explicitly ("the iron banding rings on the mace head — these RINGS REMAIN PRESENT, do not remove them"). The composite preserves bytes-exact, so what's there stays there — but the next prompt should still re-state it so subsequent edits don't accidentally erase it. |
 
-### G2. Denoise the RAW keeper before compositing (LOCKED 2026-05-05, ORDER REVISED)
+### G2. Clean up the RAW keeper before compositing (LOCKED 2026-05-05, ORDER REVISED; cleanup model revised 2026-05-13)
 
-Re-running L7→L8 with a *denoised* L7 keeper (vs the raw model output) produced visibly **cleaner output** across all 4 variants — outlines crisper, helm surface smoother, less painted-over noise. Same prompt, same scale anchor, only the content reference changed.
+Re-running L7→L8 with a *cleaned-up* L7 keeper (vs the raw model output) produced visibly **cleaner output** across all 4 variants — outlines crisper, helm surface smoother, less painted-over noise. Same prompt, same scale anchor, only the content reference changed.
 
-**CRITICAL ORDER (revised 2026-05-05)**: NAFNet deblur runs on the **RAW keeper BEFORE the composite step**, not after. Reason: NAFNet introduces its own drift on every pixel it touches. If you denoise the *composite*, the denoise drifts the L_input-preserved regions (face/hood/cape carried over byte-perfect from the prior composite), defeating the whole point of the composite. By denoising the raw keeper FIRST and then compositing, the composite locks L_input bytes-exact in unchanged regions and NAFNet drift is confined to the edit-zone pixels — where we wanted change anyway.
+**CRITICAL ORDER (revised 2026-05-05)**: the cleanup pass runs on the **RAW keeper BEFORE the composite step**, not after. Reason: any cleanup model (ESRGAN, NAFNet) introduces its own drift on every pixel it touches. If you clean up the *composite*, that drift hits the L_input-preserved regions (face/hood/cape carried over byte-perfect from the prior composite), defeating the whole point of the composite. By cleaning the raw keeper FIRST and then compositing, the composite locks L_input bytes-exact in unchanged regions and cleanup drift is confined to the edit-zone pixels — where we wanted change anyway.
+
+**Cleanup model selection (LOCKED 2026-05-13)**:
+- **Default = ESRGAN 2× supersample, saved at 2K.** Faster + much cheaper than NAFNet on the fal queue. Works well on the painted nano-banana-pro/edit artefact pattern for the vast majority of keepers. Endpoint: `https://queue.fal.run/fal-ai/esrgan`, payload `{"image_url": "...", "scale": 2}`. Output is 2048×2048 — save as `_denoise.png` **as-is** (no downscale). The chain now runs at 2K throughout, so this cleanup pass doubles as the dim-normalization step that brings the 1024×1024 nano-banana-pro/edit raw output up to the chain dim. Final deliverables are 2K, so we avoid the legacy downscale-now / upscale-for-delivery round-trip.
+- **Fallback = NAFNet deblur** (`fal-ai/nafnet/deblur`, `{"image_url": "..."}`, preserves input dim — at 2K it's 2048 in → 2048 out). Slower and more expensive, but preserves painted brushwork on stubborn artefacts where ESRGAN over-sharpens, halos, washes brushwork, or visibly shifts color. Switch to NAFNet for that keeper only when the user reports an issue with the ESRGAN-cleaned composite. **Important**: since the raw nano-banana-pro/edit keeper is 1024 and NAFNet preserves dim, the fallback path is **ESRGAN-upscale the raw to 2K first, then NAFNet-deblur the 2K image** — otherwise you'd lock a 1024 keeper into a 2K chain and the composite step would dim-mismatch.
+- Earlier docs (2026-05-04 / 05) framed NAFNet deblur as the locked default at 1024 throughout. That was superseded 2026-05-13 — the artefact pattern is benign enough for ESRGAN's much faster path to win on cost / time, with NAFNet retained as the escape hatch for the cases where it doesn't. The same 2026-05-13 update bumped the chain dim from 1024 to 2048 (eliminating the redundant downscale-then-upscale) — every level's _denoise.png and _composited.png are now 2048×2048.
 
 **Recipe**:
 1. User picks raw keeper from `variants/archer_L<n>_v<i>.png`.
-2. NAFNet deblur the raw keeper → `composite/archer_L<n>_v<i>_denoise.png`.
-3. Composite the *denoised raw* against the previous level's composited keeper → `composite/archer_L<n>_v<i>_composited.png`.
-4. Use `composite/archer_L<n>_v<i>_composited.png` as `image_urls[0]` in the next level. **No further denoise pass on the composite.**
+2. Clean up the raw keeper (default ESRGAN 2× → 1024 downscale; NAFNet deblur fallback) → `composite/archer_L<n>_v<i>_denoise.png` (name unchanged regardless of which model produced it — downstream code is agnostic).
+3. Composite the *cleaned raw* against the previous level's composited keeper → `composite/archer_L<n>_v<i>_composited.png`.
+4. Use `composite/archer_L<n>_v<i>_composited.png` as `image_urls[0]` in the next level. **No further cleanup pass on the composite.**
 
-**Wrong order (deprecated 2026-05-05)**: composite the raw keeper, THEN NAFNet the composite, THEN chain. Caused face/hood/cape to drift across every chain step despite the composite's preservation guarantee.
+**Wrong order (deprecated 2026-05-05)**: composite the raw keeper, THEN run cleanup on the composite, THEN chain. Caused face/hood/cape to drift across every chain step despite the composite's preservation guarantee.
 
-**What it doesn't fix**: prompt-side misses (e.g. the missing gold helm trim band — see drift table). Denoise improves fidelity of carried-over content; it doesn't change what the model decides to render from the prompt.
+**What it doesn't fix**: prompt-side misses (e.g. the missing gold helm trim band — see drift table). The cleanup pass improves fidelity of carried-over content; it doesn't change what the model decides to render from the prompt.
 
 ### G. Auto-pick discipline
 
@@ -339,7 +344,7 @@ If a variant drifts more than ±5% on vertical fill or top margin, flag it as a 
 - 1×3 grids at `3:2` aspect (panels ≈ 1365×2048) — fewer panels means each delta is larger relative to the full latent, may avoid the late-panel collapse.
 - Different model — some image models handle multi-panel comic-style grids better than nano-banana.
 
-### K. Post-process denoising / cleanup (LOCKED 2026-05-04 / 05)
+### K. Post-process denoising / cleanup (LOCKED 2026-05-04 / 05; default cleanup model revised 2026-05-13)
 
 **Problem**: chained edits through nano-banana-pro/edit accumulate re-encoding noise in the latent. By the late-tier levels (L8–L10) the keepers show visible color drift, micro-artefacts, and grain even when the kit is correct. Anchoring all generations to L1_Base (Part 1 § B Rule 1 applied universally) bounds the noise per-level, but a final cleanup pass still helps.
 
@@ -348,27 +353,43 @@ If a variant drifts more than ±5% on vertical fill or top margin, flag it as a 
 **Models tested on fal**:
 | Tool | Endpoint | Result on stylized art |
 |------|----------|------------------------|
-| **NAFNet deblur** | `fal-ai/nafnet/deblur` | **WINNER (locked).** Cleanest result, preserves the painted brushwork, doesn't flatten outlines or wash colors. Counter-intuitive: the deblur model — not the denoise model — was the better cleanup pass for our painted style. Likely because the artefacts read more like soft blur than like granular noise. |
-| **NAFNet denoise → NAFNet deblur** (chained) | `fal-ai/nafnet/denoise` then `fal-ai/nafnet/deblur` | **Strong second (locked as backup).** Slightly more aggressive cleanup than deblur alone; loses a hair of brushwork detail. Use when single-pass deblur isn't enough. |
-| NAFNet denoise (single pass) | `fal-ai/nafnet/denoise` | Decent. Less effective than deblur alone for our specific artefact pattern. |
+| **ESRGAN 2× → LANCZOS 1024 downscale** | `fal-ai/esrgan` (scale=2) | **WINNER (LOCKED 2026-05-13 — current default).** Significantly faster + cheaper than NAFNet on the fal queue, with output that holds up on the painted artefact pattern for the vast majority of keepers. The 2× supersample acts as both a sharpening and a denoise pass; the LANCZOS resize back to 1024 keeps the chain dims locked. Failure modes (rare): over-sharpening, halo at edge contrast, brushwork wash, subtle color drift — fall back to NAFNet for that specific keeper when the user flags it. |
+| **NAFNet deblur** | `fal-ai/nafnet/deblur` | **Fallback (locked).** Cleanest result on the cases ESRGAN can't handle — preserves the painted brushwork, doesn't flatten outlines or wash colors. Counter-intuitive: the deblur model — not the denoise model — was the better cleanup pass for our painted style (the artefacts read more like soft blur than like granular noise). Was the locked default 2026-05-04 / 05 → 2026-05-13. Slower and more expensive on the fal queue than ESRGAN, which is why it lost the default slot. |
+| **NAFNet denoise → NAFNet deblur** (chained) | `fal-ai/nafnet/denoise` then `fal-ai/nafnet/deblur` | Backup-of-the-fallback. Slightly more aggressive cleanup than NAFNet deblur alone; loses a hair of brushwork detail. Only reach for this if a single NAFNet deblur pass leaves visible color drift. |
+| NAFNet denoise (single pass) | `fal-ai/nafnet/denoise` | Decent. Less effective than NAFNet deblur alone for our specific artefact pattern. |
 | clarity-upscaler (`creativity` 0.20 / 0.35 / 0.50) | `fal-ai/clarity-upscaler` | Bumps resolution but reinterprets details (kit specifics drift even at low creativity). Not a clean denoise. |
 | aura-sr | `fal-ai/aura-sr` | Pure 4× upscale; smooths high-freq noise as a side effect but doesn't address drift. |
-| ESRGAN | `fal-ai/esrgan` | Classic 2× upscale, similar role to aura-sr. |
 | SUPIR | `fal-ai/supir` | Slow to schedule (workers cold-start, often 5–7+ min in queue). When it does run, output is over-restored and shifts the painted look. Worse than NAFNet deblur for our use case. |
 
 **Models NOT available on fal** (do not waste probes): SCUNet, Restormer, SwinIR, Uformer, MAXIM, FBCNN, PromptIR, DRCT.
 
-**Default cleanup pass for any keeper going forward**:
+**Default cleanup pass for any keeper going forward (LOCKED 2026-05-13)**:
 ```bash
-# Upload the keeper, then:
+# Upload the 1024×1024 raw keeper, then ESRGAN 2× supersample:
+RESP=$(curl -s -X POST "https://queue.fal.run/fal-ai/esrgan" \
+  -H "Authorization: Key $FAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"image_url\":\"<uploaded_url>\",\"scale\":2}")
+# poll status, then fetch result.image.url. Output is 2048×2048.
+# Save it as <keeper>_denoise.png AS-IS — the chain dim is 2K, no downscale.
+```
+
+ESRGAN accepts `scale` (2 or 4) and an optional `model` / `face_enhance` / `tile` knob; we use only `scale: 2`. Typical wall-clock ~10–30s per pass (vs ~30–60s for NAFNet).
+
+**Pre-flight: ensure `Refs/L1_Base.png` is 2K** before chain start. If a unit's L1 reference is 1024 (legacy Archer-era), run the same ESRGAN 2× call against it once and overwrite `Refs/L1_Base.png` with the 2K result (back up the 1024 original as `Refs/L1_Base_1K.png`). This brings the chain origin up to the 2K chain dim so L2 composites cleanly.
+
+**Fallback — NAFNet deblur** when the user reports issues with an ESRGAN-cleaned composite (over-sharpening, halo, washed brushwork, color drift on a specific keeper). NAFNet preserves input dim, so first ESRGAN-upscale the raw 1024 keeper to 2K, then NAFNet-deblur the 2K image:
+```bash
+# Step 1: ESRGAN 2× the raw keeper to 2K (same call as above), re-upload result as $RAW_2K_URL.
+# Step 2: NAFNet on the 2K image:
 curl -s -X POST "https://queue.fal.run/fal-ai/nafnet/deblur" \
   -H "Authorization: Key $FAL_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"image_url\":\"<uploaded_url>\"}"
+  -d "{\"image_url\":\"$RAW_2K_URL\"}"
 ```
-SUPIR-style prompt knobs are not needed — NAFNet takes only `image_url`. ~30–60s wall-clock per pass. Output preserves source resolution (1024×1024 in → 1024×1024 out).
+NAFNet takes only `image_url`. ~30–60s wall-clock per pass. Output preserves source resolution (2048 in → 2048 out at the current chain dim). Save to the same `<keeper>_denoise.png` path; downstream is model-agnostic.
 
-**When to escalate to the chained denoise→deblur**: only if a single deblur pass leaves visible color drift. Upload the deblur output as the input to a second NAFNet pass.
+**When to escalate further (NAFNet denoise → NAFNet deblur chained)**: only if a single NAFNet deblur pass also leaves visible color drift. Upload the deblur output as the input to a second NAFNet pass.
 
 ### L. Drift mitigation via diff-mask composite (LOCKED 2026-05-05)
 
@@ -384,7 +405,7 @@ python .claude/skills/composite-keeper/scripts/composite_keeper.py \
   --qc-json  out/L<n>/archer_L<n>_v<i>_qc.json
 ```
 
-**Defaults (locked 2026-05-05)**: `low=5, high=15, diff_pool_sigma=8, mask_blur_sigma=3, dilate_edit_px=10`.
+**Defaults (locked 2026-05-05; spatial knobs doubled 2026-05-13 for 2K chain)**: `low=5, high=15, diff_pool_sigma=16, mask_blur_sigma=6, dilate_edit_px=20`. Thresholds (low / high) are intensity-based and stay at the 2026-05-05 values; pool / mask_blur / dilate are pixel-space sigma/radius and doubled with the chain dim from 1024 → 2048. ⚠ The doubling is a geometric scaling — the 1K-era seed_calibration sweep has NOT been rerun at 2K. Treat the doubled values as a first cut and retune manually if QC metrics drift on early 2K keepers.
 
 **How it works**:
 ```
@@ -396,20 +417,23 @@ composite = L_input × mask + L_raw × (1 − mask)
 - mask = 0 → use L_raw pixel (model edit, untouched)
 - 0 < mask < 1 → soft alpha blend at boundary
 
-**Why these defaults** (full sweep at [experiments/seed_calibration/composite_boundary_test/](experiments/seed_calibration/composite_boundary_test/)):
-- `low=5, high=15`: sensitive enough to catch all real edits; loose enough to ignore brushwork-noise drift.
-- `diff_pool_sigma=8`: prevents leopard-spotted masks in textured regions (leather wraps, X-strap, gambeson). Without pooling, individual pixels in textured areas exceed threshold even when content matches — falsely flagged as edits. Pool=8 averages each pixel's diff with its neighborhood before the threshold decision.
-- `dilate_edit_px=10`: expands the edit region by 10 pixels. Fixes boundary artefacts at sharp edit edges (e.g. the top of the L3 leather greaves) where the diff at the exact edge is tiny but the boundary needs to be fully L_raw.
+**Why these defaults** (full sweep at [experiments/seed_calibration/composite_boundary_test/](experiments/seed_calibration/composite_boundary_test/) — sweep was at 1K; spatial knobs below quote both the 1K rationale and the 2K-era doubled value):
+- `low=5, high=15` (unchanged at 2K — intensity-based): sensitive enough to catch all real edits; loose enough to ignore brushwork-noise drift.
+- `diff_pool_sigma=8 → 16` (doubled 2026-05-13): prevents leopard-spotted masks in textured regions (leather wraps, X-strap, gambeson). Without pooling, individual pixels in textured areas exceed threshold even when content matches — falsely flagged as edits. The 1K sweep landed on pool=8 (averaging each pixel's diff with an 8-sigma neighborhood); at 2K the equivalent physical neighborhood is 16. Same physical smoothing radius, double the pixels.
+- `dilate_edit_px=10 → 20` (doubled 2026-05-13): expands the edit region by 10 (now 20) pixels. Fixes boundary artefacts at sharp edit edges (e.g. the top of the L3 leather greaves) where the diff at the exact edge is tiny but the boundary needs to be fully L_raw. Same physical edge-zone width at 2K.
+- `mask_blur_sigma=3 → 6` (doubled 2026-05-13): soft-feathered mask boundary; same physical feather width at 2K.
 
-**Tier-break tuning**: for very large edit areas (L1→L4 sleeves, L1→L7 plate, L9→L9.5 fauld skirt swap) bump `dilate_edit_px` to 15-20. For tiny add-ons (single-feature levels) drop to 0-5.
+⚠ **The 2026-05-13 spatial doubling has not been empirically recalibrated at 2K.** It is a geometric scaling that preserves the same physical (rather than pixel-count) behavior. If QC metrics on early 2K keepers drift (large `transition_pct`, raised `mask_islands`, drift in `preserved_drift_mean_abs`), retune `pool / mask_blur / dilate` manually rather than treating these values as locked. The locked 2026-05-05 values for the threshold knobs (`low` / `high`) are dim-invariant and remain authoritative.
+
+**Tier-break tuning (2K-era)**: for very large edit areas (L1→L4 sleeves, L1→L7 plate, L9→L9.5 fauld skirt swap) bump `dilate_edit_px` to 30-40 (was 15-20 at 1K). For tiny add-ons (single-feature levels) drop to 0-10.
 
 **Per-step workflow** (replaces step 8 onward in the per-level workflow in [README.md](README.md)):
 1. Generate 4 variants → review → user picks keeper.
-2. **NAFNet deblur the RAW keeper** (§ K, § G2) → `composite/archer_L<n>_v<i>_denoise.png`. Skip only when the raw keeper is visibly clean (early levels, simple adds).
+2. **Clean up the RAW keeper** (§ K, § G2 — default ESRGAN 2× saved at 2K; NAFNet deblur as fallback applied to the ESRGAN-upscaled raw so it stays at 2K) → `composite/archer_L<n>_v<i>_denoise.png` (2048×2048). Skip only when the raw keeper is visibly clean (early levels, simple adds) — but even then, ESRGAN-upscale the raw to 2K so the dims match the chain.
 3. **Composite the DENOISED raw** against the previous chain input (also composited):
    `python .claude/skills/composite-keeper/scripts/composite_keeper.py --raw <denoised_raw> --input <prev_composited> --output <keeper>_composited.png --qc-image <keeper>_qc.png --qc-json <keeper>_qc.json`
 4. **Inspect QC output** (see § L.1 below). Resolve any warnings before chaining forward.
-5. Use `<keeper>_composited.png` as the chain input for the next level (NOT the raw keeper, NOT the denoised raw, NOT a denoised-after-composite). **Never NAFNet the composite** — that drifts the preserved regions.
+5. Use `<keeper>_composited.png` as the chain input for the next level (NOT the raw keeper, NOT the cleaned raw, NOT a cleaned-after-composite). **Never run the cleanup pass on the composite** (applies to both ESRGAN and NAFNet) — that drifts the preserved regions.
 
 **Why composite, not subtraction**: we tested no-op-calibration drift subtraction first (see [experiments/seed_calibration/run_0/](experiments/seed_calibration/run_0/), [run_1_aggressive/](experiments/seed_calibration/run_1_aggressive/), [run_1_moderate/](experiments/seed_calibration/run_1_moderate/)). Subtraction reduces drift by ~70-85% in unchanged regions but has prompt-conditioned residual that can't be eliminated, AND costs +1 API call per chain step. Composite gives 100% preservation in unchanged regions, costs 0 extra API calls. Strictly better for our use case (additive kit prompts where unchanged regions truly should remain unchanged).
 
@@ -626,7 +650,7 @@ The numbered list below:
 13. **Locked keepers (as of 2026-05-04)**: L2 v3, L3 v1, L4 v3. L5 keeper pending user selection.
 14. **No multi-panel grid generation for progression** (2026-05-04) — tested 1×4 (21:9) and 2×2 (1:1) grids per tier; last two panels always collapsed into near-identical images. See Part 1 § J. Stay on per-level chained pipeline.
 15. **L1-anchored prompt set is the production strategy** (2026-05-04) — full set in `Prompts/archer_anchored_L<2..6>.json`. Every level generates from `Refs/L1_Base.png` in a single pass; never chain from a previous keeper. Bounds noise/drift to one re-encoding per level instead of compounding across the chain. See Part 1 § B Rule 1.
-16. **NAFNet deblur is the default denoise pass** (2026-05-04 / 05) — `fal-ai/nafnet/deblur`. Single-pass on any keeper. Counter-intuitive winner over the NAFNet denoise model (the artefacts read more like blur than noise). Backup: chain NAFNet denoise → NAFNet deblur if a single pass isn't enough. SUPIR / clarity-upscaler / aura-sr / ESRGAN all tested and rejected for this style. See Part 1 § K.
+16. **ESRGAN 2× is the default cleanup pass; NAFNet deblur is the fallback; the chain runs at 2K** (LOCKED 2026-05-13; supersedes the 2026-05-04 / 05 NAFNet-default at 1024) — `fal-ai/esrgan` with `scale: 2`, output saved at 2048×2048 as-is (no downscale). Significantly faster + cheaper than NAFNet on the fal queue. Works well on the painted artefact pattern for the vast majority of keepers. Switch to `fal-ai/nafnet/deblur` for a specific keeper only when the user flags the ESRGAN-cleaned composite as worse than raw (over-sharpening, halo, washed brushwork, color drift); NAFNet preserves dim, so apply it to the ESRGAN-upscaled-to-2K raw rather than the 1024 raw. Backup-of-the-fallback: chain NAFNet denoise → NAFNet deblur if a single NAFNet pass isn't enough. SUPIR / clarity-upscaler / aura-sr tested and rejected for this style. ESRGAN also does the chain-start pre-flight upscale on any non-2K `Refs/L1_Base.png`. See Part 1 § K.
 15. **Sanity-check the FINAL chained step against the actual ground truth before locking the plan** (2026-05-04) — discovered mid-pipeline that the locked L9 → L10_Base.png jump was too large (cloth tassets vs steel faulds, plain plate vs gold-trimmed plate, conical helm vs taller pointed helm). Resolution: inserted L9.5 "Royal-Grade Plate Graduation" as an intermediate bridge level, cleanly absorbed by chaining from L9 v3 keeper. Authoring rule: at plan time, render-test the last 1-2 levels against the ground truth ref before committing to the per-level beat list — if the jump is too big to plausibly land in one chained step, insert an X.5 intermediate.
 16. **Livery migration ends at L9, not L10** (2026-05-04, revising the original locked rule) — the L10 ground truth shows NO mustard yellow in the silhouette and the only red is the cape + throat wedge. Revised migration: cloth tassets at L8 + L9 (red+yellow alternating), steel fauld plate skirt at L9.5 + L10 (no cloth at hip, gold edge trim instead). Mustard yellow effectively migrates into the gold accents from L9.5 onward. The original "tassets carry livery L8-L10" rule was based on an early read of the ground truth and doesn't survive contact with L10_Base.png.
 17. **Don't retire scout-kit accessories cleanly between tiers without flagging the visual loss** (2026-05-04) — the L8 plan retired hip pouches + knife from L7 to "let the wider belt and tassets fill the silhouette." User flagged this as a real visual downgrade ("L7 still has all of these accessories on his belt which are now gone"). Authoring rule: when the plan retires named accessories at a tier transition, surface this as a deliberate decision in the keeper-review presentation (not a quiet plan-text consequence) so the user can override.
@@ -634,7 +658,7 @@ The numbered list below:
 19. **Background is described as clean white only, never transparent (LOCKED 2026-05-05)** — nano-banana-pro/edit cannot emit alpha; the word "transparent" in the prompt produces a baked checkerboard pattern. All prompts and style anchors now say "clean white background" only.
 20. **Tier-break levels have a chained alternative prompt (2026-05-05; updated 2026-05-07)** — for L4 and L7, the canonical prompt is the chained variant (`archer_edit_L<n-1>_to_L<n>.json`) with the SINGLE-INPUT chained rule (locked decision #6 revised 2026-05-07). The anchored alternates (`archer_edit_L1_to_L<n>.json`) are DEPRECATED in v3+ and not used. Outputs go to `out/v<N>/L<n>/` (no `_chained` suffix needed since chained is the only path).
 21. **Seed reproducibility is `num_images`-conditional (LOCKED 2026-05-05, REVISED same day)** — the fal `nano-banana-pro/edit` endpoint honors the seed parameter only when `num_images: 1`; with `num_images: 4` it produces non-deterministic batches (verified: two consecutive submissions of an identical seed=42 + num_images=4 payload yielded 4 different SHA-256 hashes per variant). Two operating modes: **fast mode** (one num_images=4 call per level — fast, NOT reproducible — current default for routine iteration) and **reproducible mode** (four parallel num_images=1 calls with seeds `S, S+1, S+2, S+3` — same wall-clock when parallelized, byte-reproducible per variant — use for prompt-edit iteration with pinned baseline, audit-grade provenance, drift calibration). The sidecar JSON writes in both modes; in fast mode the seed is audit-only, in reproducible mode it does the work. See Part 1 § A2.
-22. **Diff-mask composite is the mandatory drift-mitigation step between every level lock and the next chained generation (LOCKED 2026-05-05)** — preserves L_input pixels in unchanged regions byte-perfect (preserved_drift mean abs ~0.05) while keeping L_raw pixels in edit regions. Replaces no-op-calibration drift subtraction (which had prompt-conditioned residual that couldn't be eliminated AND cost +1 API call per chain step). Defaults: `low=5, high=15, diff_pool_sigma=8, mask_blur_sigma=3, dilate_edit_px=10`. For tier breaks bump dilate to 15-20; for tiny adds drop to 0-5. Tool: the [composite-keeper skill](../../.claude/skills/composite-keeper/SKILL.md) (script: `.claude/skills/composite-keeper/scripts/composite_keeper.py`). Always inspect the QC image and resolve any warnings before chaining forward — they propagate. See Part 1 § L. Full sweep + decision rationale in `experiments/seed_calibration/composite_boundary_test/`.
+22. **Diff-mask composite is the mandatory drift-mitigation step between every level lock and the next chained generation (LOCKED 2026-05-05; spatial knobs doubled 2026-05-13 for the 2K chain)** — preserves L_input pixels in unchanged regions byte-perfect (preserved_drift mean abs ~0.05 at 1K) while keeping L_raw pixels in edit regions. Replaces no-op-calibration drift subtraction (which had prompt-conditioned residual that couldn't be eliminated AND cost +1 API call per chain step). Defaults: `low=5, high=15` (intensity-based, unchanged), `diff_pool_sigma=16, mask_blur_sigma=6, dilate_edit_px=20` (pixel-space, doubled 2026-05-13 from the 1K-era `8 / 3 / 10`). For tier breaks bump dilate to 30-40 (was 15-20 at 1K); for tiny adds drop to 0-10. Tool: the [composite-keeper skill](../../.claude/skills/composite-keeper/SKILL.md) (script: `.claude/skills/composite-keeper/scripts/composite_keeper.py`). Always inspect the QC image and resolve any warnings before chaining forward — they propagate. ⚠ The 2026-05-13 doubling is a geometric scaling — the seed_calibration sweep has not been rerun at 2K. Retune `pool / mask_blur / dilate` manually if QC metrics drift on early 2K keepers. See Part 1 § L. Full sweep + decision rationale in `experiments/seed_calibration/composite_boundary_test/`.
 
 23. **Detail Economy / Silhouette-First Rule (LOCKED 2026-05-07 per AD FeedbackV0)** — late-tier richness comes from VOLUME and SILHOUETTE SHAPE, not from stacked surface ornament. Specific Archer applications:
     - **Belt kit minimized**: dagger sheath at L3 is the ONLY belt accessory through the chain. NO hip pouches at any level. NO tool-loop ring at L6. NO leather tags. **Dagger sheath carries through L3–L10** (the original 2026-05-07 lock retired it at L8; AD reversed that on 2026-05-08 — the dagger remains visible at the anatomical-RIGHT hip on every level, hanging from the L8+ wider belt above/in-front-of the tassets). (Reverses earlier plan that accumulated 1-2-3 hip pouches across L2/L3/L6.)
@@ -696,11 +720,11 @@ The numbered list below:
 
 **Lock a keeper and chain forward:**
 1. User picks the keeper (e.g. v3).
-2. **NAFNet deblur the RAW keeper FIRST** (§ G2, § K — runs BEFORE the composite, never after):
-   - Upload `out/v<N>/L<n>/variants/archer_L<n>_v<i>.png` to FAL CDN.
-   - POST to `https://queue.fal.run/fal-ai/nafnet/deblur` with `{"image_url":"<uploaded>"}`.
-   - Save the result to `out/v<N>/L<n>/composite/archer_L<n>_v<i>_denoise.png`.
-   - Skip step 2 only when the raw keeper is visibly clean (early levels, simple adds).
+2. **Clean up the RAW keeper FIRST** (§ G2, § K — runs BEFORE the composite, never after):
+   - Upload `out/v<N>/L<n>/variants/archer_L<n>_v<i>.png` (1024×1024 from nano-banana-pro/edit) to FAL CDN.
+   - **Default = ESRGAN 2× supersample** — POST to `https://queue.fal.run/fal-ai/esrgan` with `{"image_url":"<uploaded>","scale":2}`. Poll, fetch `result.image.url`, download the 2048×2048 result and save it as-is to `out/v<N>/L<n>/composite/archer_L<n>_v<i>_denoise.png` (no downscale — the chain runs at 2K).
+   - **Fallback = NAFNet deblur** when the user reports issues with the ESRGAN-cleaned composite. NAFNet preserves dim, so first ESRGAN-upscale the raw to 2K (same call as above), re-upload the 2K result, then POST to `https://queue.fal.run/fal-ai/nafnet/deblur` with `{"image_url":"<raw_2k_url>"}` and save the 2048×2048 result to the same `_denoise.png` path.
+   - Skip step 2 only when the raw keeper is visibly clean (early levels, simple adds) — but even then, ESRGAN-upscale the raw 1024 keeper to 2K so it composites cleanly against the 2K chain.
 3. **Apply diff-mask composite** on the DENOISED RAW (mandatory — see Part 1 § L):
    ```bash
    python .claude/skills/composite-keeper/scripts/composite_keeper.py \
@@ -711,11 +735,11 @@ The numbered list below:
      --qc-image out/v<N>/L<n>/composite/archer_L<n>_v<i>_qc.png \
      --qc-json  out/v<N>/L<n>/composite/archer_L<n>_v<i>_qc.json
    ```
-   Tighter thresholds `--low 10 --high 25` (locked v2 default) preserve more of the prior composite's face/hood/cape; the original 5/15 leaks faint face touch-ups into the edit zone. For tier breaks add `--dilate 15` or 20.
+   Tighter thresholds `--low 10 --high 25` (locked v2 default; intensity-based, dim-invariant) preserve more of the prior composite's face/hood/cape; the original 5/15 leaks faint face touch-ups into the edit zone. Spatial knobs default to `--pool 16 --mask-blur 6 --dilate 20` at 2K (doubled 2026-05-13 from the 1K `8 / 3 / 10`). For tier breaks override `--dilate 30` (was 15 at 1K); for very large edit areas (L10) use `--dilate 40` (was 20 at 1K).
 4. **Inspect the QC image and JSON.** Resolve any printed warnings before chaining (Part 1 § L.1 has the metric reference). Common fixes: `mask_islands` too high → bump `--pool` to 12-15; boundary artefacts at edit edges → bump `--dilate` to 15-20.
 5. Update `_meta.input_image` in the next-level prompt JSON to reference the composited keeper.
 6. Upload that file to FAL CDN (returns a fresh URL).
-7. Run the next-level generation with the composited keeper URL as the SINGLE entry in `image_urls` (single-input chained — locked 2026-05-07; do NOT also send L1_Base as a second image). Pass an explicit seed and write the sidecar (see "Run a generation" above). **Do NOT NAFNet the composite before chaining** — denoise drift on the preserved regions defeats the composite's purpose.
+7. Run the next-level generation with the composited keeper URL as the SINGLE entry in `image_urls` (single-input chained — locked 2026-05-07; do NOT also send L1_Base as a second image). Pass an explicit seed and write the sidecar (see "Run a generation" above). **Do NOT run any cleanup pass (ESRGAN or NAFNet) on the composite before chaining** — cleanup drift on the preserved regions defeats the composite's purpose.
 
 **Reproduce a batch from its sidecar (only works for batches generated in reproducible mode, num_images=1):**
 1. Confirm the sidecar's `num_images: 1`. If it says 4, the original batch is not reproducible — see "audit-only" path below.

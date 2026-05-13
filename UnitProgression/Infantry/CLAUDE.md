@@ -5,7 +5,7 @@
 >
 > **Pipeline rules and shared learnings live in `../Archer/CLAUDE.md`** — read that file in full before working in this directory. This file ONLY contains Infantry-specific deltas and unit-specific lessons. If a topic isn't covered here, the Archer doc is authoritative.
 
-> **Skill-driven pipeline.** Run via `/unit-progression Infantry`. Generation, NAFNet deblur, composite-keeper, QC, and Drive upload all run from the shell — see Archer/CLAUDE.md § Part 4 recipes.
+> **Skill-driven pipeline.** Run via `/unit-progression Infantry`. Generation, cleanup pass (default ESRGAN 2× saved at 2K; NAFNet deblur on the ESRGAN-upscaled raw as fallback — chain runs at 2K throughout), composite-keeper, QC, and Drive upload all run from the shell — see Archer/CLAUDE.md § Part 4 recipes.
 
 ---
 
@@ -50,12 +50,12 @@ For every level transition (L1→L2, L2→L3, …, L9.5→L10) the per-step work
 
 1. Generate 4 variants from the chained composite + L1_Base anchor.
 2. User picks keeper.
-3. **NAFNet deblur the RAW keeper** → `composite/<unit>_L<n>_v<i>_denoise.png`. Single pass, `fal-ai/nafnet/deblur` endpoint. Skip ONLY if the raw keeper is visibly clean (rare — recommended for every level on Infantry given the chain depth).
-4. **Composite the DENOISED RAW** against the prior composited keeper → `composite/<unit>_L<n>_v<i>_composited.png`. Use the [composite-keeper skill](../../.claude/skills/composite-keeper/SKILL.md) (`.claude/skills/composite-keeper/scripts/composite_keeper.py`) with locked thresholds `--low 10 --high 25`. Tier-break bump `--dilate 15` (L4) or `--dilate 20` (L7).
+3. **Clean up the RAW keeper** → `composite/<unit>_L<n>_v<i>_denoise.png` (2048×2048). **Default**: ESRGAN 2× at `fal-ai/esrgan` (`{"scale": 2}`), save the 2K result as-is — no downscale (LOCKED 2026-05-13 — chain runs at 2K; faster + cheaper than NAFNet). **Fallback**: ESRGAN-upscale the raw to 2K, then NAFNet deblur the 2K image at `fal-ai/nafnet/deblur` (NAFNet preserves dim; running it on the 1024 raw would lock a 1024 keeper into the 2K chain). Skip ONLY if the raw keeper is visibly clean (rare — cleanup is recommended for every level on Infantry given the chain depth) AND remember to ESRGAN-upscale the raw to 2K so the chain dims match.
+4. **Composite the DENOISED RAW** against the prior composited keeper → `composite/<unit>_L<n>_v<i>_composited.png`. Use the [composite-keeper skill](../../.claude/skills/composite-keeper/SKILL.md) (`.claude/skills/composite-keeper/scripts/composite_keeper.py`) with locked thresholds `--low 10 --high 25` (intensity-based, dim-invariant) and 2K-era spatial defaults `--pool 16 --mask-blur 6 --dilate 20` (doubled 2026-05-13 from 1K `8 / 3 / 10`). Tier-break bump `--dilate 30` (L4) or `--dilate 40` (L7). ⚠ Spatial doubling is a geometric scaling — not yet empirically recalibrated at 2K. Retune manually if QC metrics drift.
 5. **Inspect QC.** Resolve every warning before chaining forward.
 6. The composite becomes `image_urls[0]` for the next level.
 
-**Never** skip steps 3-5 between levels. **Never** denoise the composite. **Never** chain off the raw keeper. Full reasoning: `../Archer/CLAUDE.md` § Part 1 § G2 + § L.
+**Never** skip steps 3-5 between levels. **Never** run the cleanup pass (ESRGAN or NAFNet) on the composite. **Never** chain off the raw keeper. Full reasoning: `../Archer/CLAUDE.md` § Part 1 § G2 + § L.
 
 ### C. Prompt structure
 Same skeleton as Archer (see `../Archer/CLAUDE.md` § Part 1 § C). Replace archer-specific anchor language (bow, hood, cape, olive trousers) with Infantry anchors (mail coif, mace, round shield, blue trousers, beard).
@@ -204,8 +204,8 @@ If a prompt currently calls for any of the above, strip it on revision and lean 
 11. **Framing pixel-locked to L1_Base** for L1-L9.5; L10 drops the L1_Base scale anchor to allow new helm crest vertical extent.
 12. **Hand convention**: anatomical (mace = anatomical-RIGHT = viewer-LEFT; shield = anatomical-LEFT = viewer-RIGHT).
 13. **L9.5 bridge level included** — between L9 and L10 to absorb the royal-grade jump (gold cross, gold cuirass piping, gold gauntlets).
-14. **NAFNet deblur is the default denoise pass** (same as Archer).
-15. **Diff-mask composite is mandatory between every level lock and the next chain step** (same as Archer; reinforced for Infantry's all-chained pipeline). Tighter thresholds `--low 10 --high 25` locked default. Tier-break dilate bump 15-20.
+14. **ESRGAN 2× is the default cleanup pass; NAFNet deblur is the fallback; chain runs at 2K throughout** (LOCKED 2026-05-13 — same as Archer / Cavalry; supersedes the earlier NAFNet-default at 1024). ESRGAN at `fal-ai/esrgan` with `scale: 2`, output saved at 2048×2048 as-is (no downscale). Switch to NAFNet deblur for a specific keeper only when the user flags the ESRGAN-cleaned composite as worse than raw; apply NAFNet to the ESRGAN-upscaled-to-2K raw, not the 1024 raw. `Refs/L1_Base.png` must be 2K — ESRGAN-upscale once at chain start if the source is smaller.
+15. **Diff-mask composite is mandatory between every level lock and the next chain step** (same as Archer; reinforced for Infantry's all-chained pipeline). Tighter thresholds `--low 10 --high 25` locked default (intensity-based, dim-invariant). 2K-era spatial defaults `--pool 16 --mask-blur 6 --dilate 20` (doubled 2026-05-13 from 1K `8 / 3 / 10` — not yet empirically recalibrated, retune if early-2K QC drifts). Tier-break dilate bump 30-40.
 16. **Silhouette mightiness rule** for the plate tier (L7-L10) — each level must visibly increase mass / stature, not just surface ornament. See § Part 2 § K.
 17. **Detail Economy / Silhouette-First Rule (LOCKED 2026-05-07 per AD FeedbackV0)** — late-tier richness comes from VOLUME, SILHOUETTE SHAPE, and MATERIAL CHANGE — NEVER from stacked surface ornament. See § Part 2 § K for the locked "first cut" list. Specific Infantry applications:
     - **Helm earlier**: first metal headpiece at L3 (steel skullcap under mail coif), not L7. L7 sallet becomes the FIRST FULL HELM (volume upgrade vs the L3 skullcap), no longer the first metal headpiece.

@@ -2,7 +2,7 @@
 
 Visual progression for the Archer unit in **Goodgame Empire: Titans & Dragons** (EMTD), a Stillfront / Goodgame mobile kingdom-builder game in the Supercell / Kingshot art lineage. The Archer line ramps from a basic conscript at L1 to a royal elite at L10, with each level introducing clearly visible armor / equipment upgrades while preserving the unit's identity (pose, face, livery colors, silhouette anchors).
 
-> **Skill-driven pipeline.** Run via `/unit-progression Archer`. The agent uploads inputs, builds payloads, POSTs to the FAL queue directly (`curl`/`python` per CLAUDE.md § Part 1 § A), writes sidecars, polls, downloads, runs NAFNet + composite-keeper from the shell (CLAUDE.md § Part 4 recipes).
+> **Skill-driven pipeline.** Run via `/unit-progression Archer`. The agent uploads inputs, builds payloads, POSTs to the FAL queue directly (`curl`/`python` per CLAUDE.md § Part 1 § A), writes sidecars, polls, downloads, runs the cleanup pass (default ESRGAN 2× saved at 2048×2048; NAFNet deblur applied to the ESRGAN-upscaled raw as fallback — chain runs at 2K throughout) + composite-keeper from the shell (CLAUDE.md § Part 4 recipes).
 
 ## What we are doing
 
@@ -52,7 +52,10 @@ Why the change: the previous v2-era rule sent `Refs/L1_Base.png` as `image_urls[
 8. **Download** — pull the image URL(s) from each result and save to `out/v<N>/L<n>/archer_L<n>_v<1..4>.png` (fast mode: 4 from one batch; reproducible mode: 1 per call × 4 calls).
 9. **Measure framing** — verify the 4 outputs match L1_Base's 1024×1024 / 74.7% v.fill / 13.5% top / 11.8% bot / 56.8% h.fill. (fill≈99.9% / top≈0% is the checkerboard-BG bug, not a framing fail — re-roll.)
 10. **Review** — present all 4 variants to the team for keeper selection. **No auto-picks.**
-11. **NAFNet deblur the RAW keeper FIRST** (CLAUDE.md § G2, § K — must run BEFORE the composite, never after) — upload the raw keeper to FAL, POST to `https://queue.fal.run/fal-ai/nafnet/deblur`, save the result to `out/v<N>/L<n>/composite/archer_L<n>_v<i>_denoise.png`. Skip only when the raw keeper is visibly clean.
+11. **Clean up the RAW keeper FIRST** (CLAUDE.md § G2, § K — must run BEFORE the composite, never after) — upload the raw 1024×1024 keeper to FAL, then:
+    - **Default**: POST to `https://queue.fal.run/fal-ai/esrgan` with `{"image_url": "...", "scale": 2}`, fetch the 2048×2048 result, and save it **as-is** to `out/v<N>/L<n>/composite/archer_L<n>_v<i>_denoise.png` — no downscale (LOCKED 2026-05-13; the chain runs at 2K, deliverables are 2K). Faster + cheaper than NAFNet.
+    - **Fallback** (when the user reports issues with the ESRGAN-cleaned composite — over-sharpening, halo, washed brushwork, color drift): first ESRGAN-upscale the raw to 2K (same call as above), then POST to `https://queue.fal.run/fal-ai/nafnet/deblur` with `{"image_url": "<raw_2k_url>"}` and save the 2048×2048 result to the same `_denoise.png` path. NAFNet preserves dim — running it on the 1024 raw would lock a 1024 keeper into a 2K chain.
+    - Skip only when the raw keeper is visibly clean — but even then, ESRGAN-upscale the raw to 2K so the chain dims match.
 12. **Composite the DENOISED raw** (mandatory drift-mitigation — CLAUDE.md § L) — run the [composite-keeper skill](../../.claude/skills/composite-keeper/SKILL.md) against the previous level's composited keeper:
     ```bash
     python .claude/skills/composite-keeper/scripts/composite_keeper.py \
@@ -63,9 +66,9 @@ Why the change: the previous v2-era rule sent `Refs/L1_Base.png` as `image_urls[
       --qc-image out/v<N>/L<n>/composite/archer_L<n>_v<i>_qc.png \
       --qc-json  out/v<N>/L<n>/composite/archer_L<n>_v<i>_qc.json
     ```
-    v2-locked thresholds `--low 10 --high 25` preserve face/hood/cape better than the original 5/15. For tier breaks (L1→L4, L1→L7, L9→L9.5) bump `--dilate 15` or 20.
+    v2-locked thresholds `--low 10 --high 25` (intensity-based, dim-invariant) preserve face/hood/cape better than the original 5/15. Spatial knobs default to `--pool 16 --mask-blur 6 --dilate 20` at 2K (doubled 2026-05-13 from the 1K `8 / 3 / 10` — geometric scaling, not yet empirically recalibrated). For tier breaks (L1→L4, L1→L7, L9→L9.5) bump `--dilate 30` (was 15 at 1K) or `40` for very large edit areas.
 13. **Inspect QC** — open the QC image and resolve any printed warnings before chaining. Metrics reference in CLAUDE.md § L.1.
-14. **Chain forward** — the composited keeper becomes the SINGLE `image_urls` entry in the next-level prompt (single-input chained, locked 2026-05-07). **Do NOT also send L1_Base as a second image.** **Never chain off the raw keeper.** **Never NAFNet the composite** — denoise drift on the preserved regions defeats the composite's purpose.
+14. **Chain forward** — the composited keeper becomes the SINGLE `image_urls` entry in the next-level prompt (single-input chained, locked 2026-05-07). **Do NOT also send L1_Base as a second image.** **Never chain off the raw keeper.** **Never run the cleanup pass (ESRGAN or NAFNet) on the composite** — cleanup drift on the preserved regions defeats the composite's purpose.
 15. **Final delivery** (only after the full L1–L10 chain is locked) — assemble `out/v<N>/Final/` per CLAUDE.md § Part 4 "Final delivery": copy each locked composite into `Final/L<n>.png` (level-label only), then build `progression_compilation.png` (11264×1024 horizontal stack) + `progression_compilation_thumb.png` (2816×256 review). This is the deliverable hand-off.
 
 ### Continuity anchors (held across all 10 levels)
@@ -107,8 +110,8 @@ UnitProgression/Archer/
 │   ├── L10_Base.png                   # Top-tier ground truth
 │   └── README.md                      # Notes on what reference images are kept here
 ├── out/                               # Generation outputs — 4 variants per level
-│   ├── v0/                            # Pre-NAFNet generations (archived) — L2…L10 + L9.5 keepers
-│   ├── v1/                            # First composited+NAFNet chain (legacy flat layout per level dir)
+│   ├── v0/                            # Pre-cleanup generations (archived) — L2…L10 + L9.5 keepers
+│   ├── v1/                            # First composited+cleanup chain (legacy flat layout per level dir; cleanup model was NAFNet deblur — historical default before the 2026-05-13 ESRGAN switch)
 │   └── v2/                            # Fully-chained run (no L1-anchored tier breaks); per-level subdir layout (locked 2026-05-05)
 │       ├── L<n>/
 │       │   ├── variants/              # archer_L<n>_v<1..4>.png — the 4 raw variants downloaded from fal

@@ -1,5 +1,5 @@
 ##Useful features##:
-
+V0:
 - Progression ramp visualization
 - Per level prompt monitoring, webapp should parse adds and removes in a human readable way ( already set up with meta_adds + meta_removes)
 - Generation of variants via FAL api and webapp job queue for easy monitoring
@@ -9,3 +9,8 @@
 - Fullscreen image viewer of each Level in a progression
 - QC modal/tab to check QC strip for results and ability to rerun composite with different values
 - Bonus : Diff compare for certain levels or diff A/B compare for original keeper vs composited keeper. 
+
+
+V1:
+- Add a targeted edit workflow/pipeline which allows targeted editing of a variant, with the additional option to rerun the rest of the progression from that level or leave it.
+

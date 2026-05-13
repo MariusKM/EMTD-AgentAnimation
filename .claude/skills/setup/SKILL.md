@@ -44,7 +44,7 @@ Run the appropriate command for the detected platform:
 cd "<repo root>"
 python -m venv .venv
 .venv\Scripts\activate
-pip install pillow numpy imageio imageio-ffmpeg
+pip install pillow numpy imageio imageio-ffmpeg opencv-python scipy
 ```
 
 **macOS / Linux:**
@@ -52,10 +52,10 @@ pip install pillow numpy imageio imageio-ffmpeg
 cd <repo root>
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pillow numpy imageio imageio-ffmpeg
+pip install pillow numpy imageio imageio-ffmpeg opencv-python scipy
 ```
 
-Verify by running `python -c "import PIL, numpy, imageio; print('ok')"` inside the venv. Record the resolved venv python path — used in Stage 4 to seed `COMPOSE_PYTHON` and `VENV_PYTHON`.
+Verify by running `python -c "import PIL, numpy, imageio, cv2, scipy; print('ok')"` inside the venv. (`opencv-python`/cv2 is needed by `compose_frames.py` + `detect_anchors.py`; `scipy` by `composite-keeper`.) Record the resolved venv python path — used in Stage 4 to seed `COMPOSE_PYTHON` and `VENV_PYTHON`.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: unit-progression
-description: Run the EMTD unit rank-progression pipeline (L1 → L10 PNG renders showing armor/kit upgrades). Use when starting or continuing a unit progression for any EMTD military unit (Archer is the pilot; same pipeline applies to future units). Walks through chained image-edit generation via fal-ai/nano-banana-pro/edit, NAFNet deblur, diff-mask compositing, and final delivery assembly.
+description: Run the EMTD unit rank-progression pipeline (L1 → L10 PNG renders showing armor/kit upgrades). Use when starting or continuing a unit progression for any EMTD military unit (Archer is the pilot; same pipeline applies to future units). Walks through chained image-edit generation via fal-ai/nano-banana-pro/edit, ESRGAN 2× cleanup (NAFNet deblur as fallback), diff-mask compositing, and final delivery assembly.
 argument-hint: <UnitName> [--level <L2..L10>]
 ---
 
@@ -19,7 +19,7 @@ Read these files before starting:
   - **§ Part 0** — output directory layout (`variants/`, `sidecars/`, `composite/`, `Final/`)
   - **§ Part 1 § A2** — seed reproducibility (only honored at `num_images: 1` — reproducible mode = 4 parallel `num_images: 1` calls with distinct seeds)
   - **§ Part 1 § B** — input strategy: SINGLE-INPUT CHAINED ONLY (LOCKED 2026-05-07). Every chained level uses ONE input = the previous level's composited keeper. Do NOT also send `Refs/L1_Base.png` as a second image. Anchored tier-break prompts are deprecated.
-  - **§ Part 1 § G2 + § K** — NAFNet deblur the **RAW keeper FIRST**, then composite (never NAFNet the composite)
+  - **§ Part 1 § G2 + § K** — cleanup pass (default = ESRGAN 2× supersample, fallback = NAFNet deblur) runs on the **RAW keeper FIRST**, then composite (never clean up the composite)
   - **§ Part 1 § L** — diff-mask composite (mandatory drift mitigation between every level lock and the next chain step)
   - **§ Part 2** — visual anchors (livery rule, pose canonical, framing canonical, hand convention, vocabulary risks). **§ Part 2 §L item 8** — accessory progressions (boots, belts, bracers, sheaths) accumulate via **plate/armor beats**, NEVER via eyelets, lacing, stitching rows, rivet runs, or trim bands as the standalone beat. Each new accessory beat must add a piece of armor (steel toe cap, heel cap, ankle band, vambrace plate, knuckle plate, etc.), apply a volume bump on an existing plate, or change the material of an existing plate. (LOCKED 2026-05-08 per AD feedback after a brass-eyelet boot draft was rejected.)
   - **§ Part 1 § C** — `_meta.adds[]` rule: ALWAYS populate the structured `_meta.adds[]` form when adding or editing prompt beats. Validate `len(_meta.adds[]) == declared adds count` after every edit. (LOCKED 2026-05-08.)
@@ -28,12 +28,14 @@ Read these files before starting:
   - **§ Part 4** — quick reference recipes (run a generation, lock a keeper and chain forward, final delivery)
 - `UnitProgression/<UnitName>/<UnitName>.md` — base character spec (face, pose, color breakdown)
 - `UnitProgression/<UnitName>/<UnitName>_Progression_Plan.md` — full 10-level ramp with tier structure + per-level beat list (single source of truth for what each level should look like)
-- `UnitProgression/<UnitName>/Refs/L1_Base.png` — canonical L1 input (must be **1024×1024 native**); used as the L2 chain origin and as the framing-measurement reference. **NOT sent as a second image on chained levels** (single-input chained rule, locked 2026-05-07).
+- `UnitProgression/<UnitName>/Refs/L1_Base.png` — canonical L1 input (must be **2048×2048 native** as of 2026-05-13 — the chain now runs at 2K throughout since the cleanup pass outputs 2K and final deliverables are 2K, eliminating the legacy downscale-then-upscale round-trip); used as the L2 chain origin and as the framing-measurement reference. **NOT sent as a second image on chained levels** (single-input chained rule, locked 2026-05-07).
 
 **Mandatory pre-flight check on `Refs/L1_Base.png` before authoring any prompts:**
-1. Verify dimensions are **exactly 1024×1024**. If the source is larger (e.g. 2048×2048 — Infantry case), downscale via `Image.resize((1024, 1024), Image.LANCZOS)` and back up the original as `Refs/L1_Base_<orig-size>.png` (e.g. `L1_Base_2K.png`). Without this, every framing measurement and the prompt's "1024×1024 canvas" language will be off-by-2x and downstream framing locks will silently drift.
-2. Run the framing measurement script (CLAUDE.md § Part 1 § I) on the 1024 version. Record the exact `vfill` / `top` / `bot` / `hfill` / `left` / `right` numbers and write them into `<UnitName>.md` § Framing AND `<UnitName>/CLAUDE.md` § Part 2 § C BEFORE authoring the L2 prompt — these become the per-unit canonical envelope.
+1. Verify dimensions are **exactly 2048×2048**. If the source is smaller (e.g. 1024×1024 — legacy Archer-era refs prior to the 2026-05-13 chain-dim bump), **ESRGAN-upscale it to 2K once**: back up the original as `Refs/L1_Base_<orig-size>.png` (e.g. `L1_Base_1K.png`), upload, POST to `https://queue.fal.run/fal-ai/esrgan` with `{"image_url": "...", "scale": 2}`, download the 2048×2048 result, and overwrite `Refs/L1_Base.png`. If the source is larger than 2K (rare), LANCZOS-downscale to 2K and back up the original. The chain (and every nano-banana-pro/edit prompt body) is anchored at 2K throughout.
+2. Run the framing measurement script (CLAUDE.md § Part 1 § I) on the 2K version. Record the exact `vfill` / `top` / `bot` / `hfill` / `left` / `right` percentage numbers and write them into `<UnitName>.md` § Framing AND `<UnitName>/CLAUDE.md` § Part 2 § C BEFORE authoring the L2 prompt — these become the per-unit canonical envelope. Percentages are dim-invariant (a 74.7% vfill envelope reads the same at 1K and 2K); the canvas size language in the prompt body (`2048×2048 canvas`) is what changes.
 3. **Per-unit framing envelopes are canonical — do NOT renormalize across units.** Different units have different vfill (Archer 74.7%, Infantry 66.8% — natural variation in source crops). The temptation when scaffolding a new unit is to "fix" the framing to match Archer's. Don't — the L1_Base envelope IS that unit's canonical envelope. With the single-input chained rule (locked 2026-05-07), the framing is held by (a) the prompt body's FRAMING block describing the canonical envelope numbers exactly, and (b) the diff-mask composite-keeper step preserving prior-level pixels byte-for-byte in unchanged regions. The L1_Base image itself is NOT used as a second-image anchor on chained calls.
+
+> ⚠ **Composite-keeper spatial defaults were doubled 2026-05-13 for the 2K chain — not empirically recalibrated.** The 1K-era defaults (`--low 10 --high 25 --pool 8 --mask-blur 3 --dilate 10`; Cavalry override `--low 15 --high 35 --pool 12`) were established by the seed_calibration sweep at 1024×1024. Same-day as the chain bump to 2K, the script defaults and per-unit overrides were doubled geometrically: `pool 8 → 16`, `mask_blur 3 → 6`, `dilate 10 → 20`, tier-break `dilate 15 → 30` and `20 → 40`, Cavalry `pool 12 → 24`. Threshold values (`--low` / `--high`) are pixel-intensity diffs, not spatial — they stay at 10/25 (Archer / Infantry) or 15/35 (Cavalry). **The seed_calibration sweep has NOT been rerun at 2K.** Watch QC metrics on the first 2K keepers — if `transition_pct`, `preserved_drift_mean_abs`, `mask_islands`, or `edit_signal_mean_abs` drift out of the healthy ranges in `composite-keeper/SKILL.md`, manually retune `--pool` / `--mask-blur` / `--dilate` rather than treating the doubled values as locked.
 
 Determine the unit from `$ARGUMENTS`. If none specified, ask which unit to work on. The pilot is `Archer`.
 
@@ -41,10 +43,11 @@ If `--level` is provided, resume from that level (assumes earlier levels are loc
 
 ## Required tools / external skills
 
-- **`fal-api-skills`** — used for uploading inputs to FAL CDN: `bash .claude/skills/fal-api-skills/skills/fal-generate/scripts/upload.sh --file <path>`. Returns a `https://v3b.fal.media/...` URL. Used for L2's L1_Base content reference (chain origin, single-input), per-level keeper composites (single-input chained), and NAFNet deblur inputs.
-- **`fal-ai/nano-banana-pro/edit`** — image-to-image edit endpoint at `https://queue.fal.run/fal-ai/nano-banana-pro/edit`. The pipeline bypasses the `fal-generate` script's payload builder (which doesn't support `/edit`) and submits via direct `curl` POST — see CLAUDE.md § Part 1 § A for the pattern.
-- **`fal-ai/nafnet/deblur`** — endpoint at `https://queue.fal.run/fal-ai/nafnet/deblur`. Single-input `{"image_url": "..."}`. The locked default cleanup pass for the chain (counter-intuitive winner over `nafnet/denoise`).
-- **`composite-keeper` skill** (`.claude/skills/composite-keeper/scripts/composite_keeper.py`) — diff-mask composite tool. Locked v2 thresholds: `--low 10 --high 25`. For tier breaks bump `--dilate 15` (or 20 for very large edit areas). See CLAUDE.md § Part 1 § L and `.claude/skills/composite-keeper/SKILL.md`.
+- **`fal-api-skills`** — used for uploading inputs to FAL CDN: `bash .claude/skills/fal-api-skills/skills/fal-generate/scripts/upload.sh --file <path>`. Returns a `https://v3b.fal.media/...` URL. Used for L2's L1_Base content reference (chain origin, single-input), per-level keeper composites (single-input chained), and cleanup-pass inputs (ESRGAN / NAFNet).
+- **`fal-ai/nano-banana-pro/edit`** — image-to-image edit endpoint at `https://queue.fal.run/fal-ai/nano-banana-pro/edit`. The pipeline bypasses the `fal-generate/scripts` script's payload builder (which doesn't support `/edit`) and submits via direct `curl` POST — see CLAUDE.md § Part 1 § A for the pattern.
+- **`fal-ai/esrgan`** — **DEFAULT cleanup pass + L1_Base pre-flight upscaler** (LOCKED 2026-05-13; downscale dropped 2026-05-13 same-day). Endpoint at `https://queue.fal.run/fal-ai/esrgan`. Payload `{"image_url": "...", "scale": 2}`. Outputs a 2048×2048 supersample which is saved **as-is** to `_denoise.png` — the whole chain now runs at 2K (eliminates the redundant downscale-then-upscale-for-delivery round-trip; final deliverables are 2048×2048 anyway). Faster + much cheaper than NAFNet, and works well on the painted nano-banana-pro/edit artefact pattern for the vast majority of keepers. Also used at chain start to bring a non-2K `L1_Base.png` up to 2K (see Setup pre-flight). If the user reports that an ESRGAN-cleaned composite looks worse than the raw (over-sharpening, halo, brushwork wash, color drift), switch to NAFNet for that keeper.
+- **`fal-ai/nafnet/deblur`** — **FALLBACK cleanup pass** (single-input `{"image_url": "..."}` at `https://queue.fal.run/fal-ai/nafnet/deblur`). Slower and more expensive than ESRGAN but preserves painted brushwork on stubborn artefacts. Use when the user flags issues with the ESRGAN-cleaned composite. Counter-intuitive winner over `nafnet/denoise` in the original test bed. **NAFNet preserves source resolution** (2048 in → 2048 out at the current chain dim); when used as a fallback on a 2K chain, no downscale or upscale step is needed.
+- **`composite-keeper` skill** (`.claude/skills/composite-keeper/scripts/composite_keeper.py`) — diff-mask composite tool. Locked v2 thresholds (intensity, dim-invariant): `--low 10 --high 25`. 2K-era spatial defaults (doubled 2026-05-13 from the 1K seed_calibration sweep — not yet empirically recalibrated, see caveat above): `--pool 16 --mask-blur 6 --dilate 20` within-tier; bump `--dilate 30` at tier breaks (or `40` for very large edit areas like L10). See CLAUDE.md § Part 1 § L and `.claude/skills/composite-keeper/SKILL.md`.
 - **`.env`** at the project root must contain `FAL_KEY=...`. Source it before any curl.
 
 ## The chain — per-level loop
@@ -125,18 +128,41 @@ Keep both lists tight — one line per item. The full descriptions live in the p
 
 If the user rejects all 4 and asks for a fresh batch, archive the current set as `variants_round<N>/` + `sidecars_round<N>/` (or `variants_<descriptor>/` like `variants_livery_fail`) so the rejected batch is preserved as audit. Then fire 4 fresh seeds.
 
-### Step 10 — On lock: NAFNet deblur the RAW keeper FIRST
-**CRITICAL ORDER (CLAUDE.md § Part 1 § G2):** denoise the raw keeper BEFORE the composite — never after. NAFNet drift on the composite would defeat the composite's pixel-perfect preservation of the prior chain input.
+### Step 10 — On lock: clean up the RAW keeper FIRST
+**CRITICAL ORDER (CLAUDE.md § Part 1 § G2):** clean up the raw keeper BEFORE the composite — never after. Cleanup drift on the composite would defeat the composite's pixel-perfect preservation of the prior chain input.
+
+**Default = ESRGAN 2× supersample, saved at 2K (LOCKED 2026-05-13).** Faster + much cheaper than NAFNet. The whole chain runs at 2K — no downscale step. Switch to NAFNet deblur (the fallback below) only if the user reports issues with the ESRGAN-cleaned composite.
+
+The raw nano-banana-pro/edit keeper at this step is **1024×1024** (model's native output dim regardless of input). ESRGAN 2× upscales it to 2048×2048 to match the chain dim — so the cleanup pass doubles as the dim-normalization step that lets the new keeper composite against the 2K prior composite.
 
 ```bash
 RAW_URL=$(bash .claude/skills/fal-api-skills/skills/fal-generate/scripts/upload.sh --file out/v<N>/L<n>/variants/archer_L<n>_v<keeper>.png 2>&1 | grep -E "^URL:" | sed 's/^URL: //')
-RESP=$(curl -s -X POST "https://queue.fal.run/fal-ai/nafnet/deblur" \
+RESP=$(curl -s -X POST "https://queue.fal.run/fal-ai/esrgan" \
   -H "Authorization: Key $FAL_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"image_url\":\"$RAW_URL\"}")
-# poll until COMPLETED, then download to:
-# out/v<N>/L<n>/composite/archer_L<n>_v<keeper>_denoise.png
+  -d "{\"image_url\":\"$RAW_URL\",\"scale\":2}")
+# poll until COMPLETED, fetch result.image.url, download the 2048x2048 result
+# straight to: out/v<N>/L<n>/composite/archer_L<n>_v<keeper>_denoise.png
+# (no downscale — 2K is the chain dim; saves the otherwise-redundant
+#  downscale-now / upscale-for-delivery round-trip)
 ```
+
+**Fallback — NAFNet deblur** (when the ESRGAN cleanup over-sharpens, halos, washes brushwork, or visibly shifts color on a particular keeper):
+
+```bash
+# Pre-condition: NAFNet preserves input dim (1024 in → 1024 out). The chain runs at 2K,
+# so first ESRGAN-upscale the raw keeper to 2K, THEN run NAFNet on the 2K image:
+ESRGAN_RESP=$(curl -s -X POST "https://queue.fal.run/fal-ai/esrgan" \
+  -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" \
+  -d "{\"image_url\":\"$RAW_URL\",\"scale\":2}")
+# (poll, fetch the 2K image URL, re-upload it to FAL CDN as $RAW_2K_URL)
+RESP=$(curl -s -X POST "https://queue.fal.run/fal-ai/nafnet/deblur" \
+  -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" \
+  -d "{\"image_url\":\"$RAW_2K_URL\"}")
+# 2048x2048 in → 2048x2048 out. Save to the same _denoise.png path.
+```
+
+Always name the output `_denoise.png` regardless of which model produced it — downstream composite-keeper / chain steps don't care which cleanup model was used.
 
 ### Step 11 — Composite the DENOISED raw against the prior composite
 ```bash
@@ -149,7 +175,7 @@ python .claude/skills/composite-keeper/scripts/composite_keeper.py \
   --qc-json  out/v<N>/L<n>/composite/archer_L<n>_v<keeper>_qc.json
 ```
 
-For tier-break levels (L4, L7) add `--dilate 15`. For very large edit areas (e.g. helm reshape + finial replacement at L10) consider `--dilate 20`.
+Spatial defaults at 2K are `--pool 16 --mask-blur 6 --dilate 20` (doubled 2026-05-13 from the 1K-era `8 / 3 / 10`). For tier-break levels (L4, L7) bump `--dilate 30`. For very large edit areas (e.g. helm reshape + finial replacement at L10) bump `--dilate 40`. See the spatial-retune caveat in Setup.
 
 For L1→L2 the composite input is `Refs/L1_Base.png` (no prior composite exists yet — L1_Base is the chain origin).
 
@@ -167,7 +193,7 @@ Open `_qc.png` (5-tile review: `L_input | L_raw | composite | mask | residual`) 
 The residual tile should be bright ONLY in the actual edit zones (the kit pieces added at this level) and near-black in unchanged regions (face, cape, legs). Unexpected brightness in unchanged regions = drift survived; bump thresholds, dilation, or pool sigma.
 
 ### Step 13 — Chain forward
-The `composite/archer_L<n>_v<keeper>_composited.png` becomes the SINGLE entry in `image_urls` in the next level's prompt (single-input chained, locked 2026-05-07). **Do NOT also send L1_Base as a second image. Never chain off the raw keeper. Never NAFNet the composite.**
+The `composite/archer_L<n>_v<keeper>_composited.png` becomes the SINGLE entry in `image_urls` in the next level's prompt (single-input chained, locked 2026-05-07). **Do NOT also send L1_Base as a second image. Never chain off the raw keeper. Never run the cleanup pass (ESRGAN or NAFNet) on the composite.**
 
 Repeat the loop for the next level.
 
@@ -193,12 +219,12 @@ levels = [
 for label, src in levels:
     shutil.copy2(src, f'{final}/{label}.png')
 
-TILE = 1024
+TILE = 2048  # chain runs at 2K (LOCKED 2026-05-13); deliverables match.
 imgs = [Image.open(f'{final}/{label}.png').convert('RGB') for label, _ in levels]
 imgs = [(im if im.size == (TILE, TILE) else im.resize((TILE, TILE), Image.LANCZOS)) for im in imgs]
 canvas = Image.new('RGB', (TILE * len(imgs), TILE), (255, 255, 255))
 for i, im in enumerate(imgs): canvas.paste(im, (i * TILE, 0))
-canvas.save(f'{final}/progression_compilation.png')                                       # 11264x1024
+canvas.save(f'{final}/progression_compilation.png')                                       # 22528x2048 for 11 tiles
 canvas.resize((256 * len(imgs), 256), Image.LANCZOS).save(f'{final}/progression_compilation_thumb.png')  # 2816x256
 ```
 
@@ -291,7 +317,9 @@ The feedback file is the canonical handoff between variant review and prompt rew
 These have already cost us a re-roll; surface them when authoring/editing prompts:
 
 - **Livery preservation is the strongest preserve rule** after pose and framing. The mustard tunic + red panels MUST stay visibly dominant on the chest L1–L7 (then migrates to chest band L7, then disappears L8–L10 once steel covers the chest). When mid-tier scale-mail levels expand the metal upward, the model deletes the tunic — fix is a `CRITICAL TWO HARD RULES` lead block at the prompt opening (mirror the L4→L5 v6 rewrite pattern).
-- **Denoise the raw keeper, not the composite.** Locked 2026-05-05. The order matters because NAFNet drifts every pixel it touches; if you NAFNet the composite, you drift the bytes-locked face/hood/cape from upstream.
+- **Clean up the raw keeper, not the composite.** Locked 2026-05-05. The order matters because any cleanup pass drifts the pixels it touches; if you clean the composite, you drift the bytes-locked face/hood/cape from upstream. Applies equally to ESRGAN 2× (current default) and NAFNet deblur (fallback).
+- **ESRGAN 2× is the default cleanup pass; NAFNet deblur is the fallback** (LOCKED 2026-05-13). ESRGAN is significantly faster + cheaper and works well on the painted nano-banana-pro/edit artefact pattern for the vast majority of keepers. Switch to NAFNet only when the user flags an ESRGAN-cleaned composite as worse than raw (over-sharpening, halo, washed brushwork, color drift). Earlier docs framed NAFNet deblur as the locked default — that has been superseded.
+- **The chain runs at 2K throughout** (LOCKED 2026-05-13). nano-banana-pro/edit emits 1024×1024; ESRGAN 2× brings each new keeper up to 2048×2048 before compositing against the prior 2K composite. Final deliverables are 2K, so the legacy downscale-to-1024-then-upscale-for-delivery round-trip is gone. `Refs/L1_Base.png` must be 2K (ESRGAN-upscale at chain start if the source is smaller — see Setup pre-flight). Composite-keeper spatial knobs (`--pool`, `--dilate`) should be scaled geometrically at 2K (pool 8→16, dilate 10→20; tier-break dilate 15→30 and 20→40) — thresholds (`--low` / `--high`) are pixel-intensity diffs and don't scale.
 - **Composite thresholds locked at `--low 10 --high 25`** for v2 onward. The original `5/15` defaults leak faint face touch-ups (model lightly retouches the face on every edit) into the composite's edit zone, producing a residual blob over the brow/eyes. 10/25 keeps the face byte-locked.
 - **Stubble shadow removed from face anchor** (revised 2026-05-05). The chained prompts had `faint stubble shadow along the jaw` in every face description, which the model amplified into a five o'clock shadow at L8 once the half-visor framed the lower face. Canonical face is now clean-shaven; do NOT describe stubble in any new prompt body. The anchored prompts (`archer_edit_L1_to_L4.json`, `archer_edit_L1_to_L7.json`) still contain stubble references and are flagged with audit notes — strip them before reuse.
 - **Half-visor at L8** bridges open-face (L7) → closed visor (L9). Without it the L8 / L9 silhouette delta is too thin (helm looks identical) and the L8→L9 jump feels harsh.
@@ -309,7 +337,7 @@ These have already cost us a re-roll; surface them when authoring/editing prompt
 
 ## Key Rules
 
-- **Always denoise raw, then composite.** Never denoise the composite.
+- **Always clean up raw, then composite.** Never clean up the composite. Default cleanup = ESRGAN 2× (downscaled back to 1024); NAFNet deblur is the fallback when ESRGAN visibly degrades a specific keeper.
 - **Always present all 4 variants** for keeper selection. **No auto-picks.**
 - **Always check QC warnings** before chaining. Resolve them before locking.
 - **Always preserve the livery band** (when the level still includes it). It's the strongest visual anchor for "this is the EMTD <unit>" at thumbnail scale.

@@ -5,13 +5,31 @@ Run AFTER a level keeper is locked, BEFORE chaining forward to the next level.
 The composite preserves L_input pixels in unchanged regions (byte-perfect)
 while keeping L_raw pixels in edit regions. No no-op calibration call needed.
 
-Default parameters were established by the seed_calibration experiments
-(2026-05-05 — see ../experiments/seed_calibration/composite_boundary_test/):
+Default parameters were originally established by the seed_calibration
+experiments at 1024×1024 (2026-05-05 — see
+../experiments/seed_calibration/composite_boundary_test/):
 
-    low_thresh=5, high_thresh=15, diff_pool_sigma=8, dilate_edit_px=10
+    low_thresh=5, high_thresh=15, diff_pool_sigma=8,
+    mask_blur_sigma=3, dilate_edit_px=10
+
+The 2026-05-13 chain-dim bump from 1024 to 2048 doubled the spatial
+defaults (pool / mask_blur / dilate are pixel-space, so they scale with
+canvas dim; thresholds low/high are pixel-intensity diffs and don't scale).
+Current defaults:
+
+    low_thresh=5, high_thresh=15, diff_pool_sigma=16,
+    mask_blur_sigma=6, dilate_edit_px=20
 
 For tier breaks (large edit areas like L1→L4 sleeves or L1→L7 plate) bump
-dilate_edit_px to 15-20. For tiny add-ons drop dilate_edit_px to 0-5.
+dilate_edit_px to 30-40 (was 15-20 at 1K). For tiny add-ons drop
+dilate_edit_px to 0-10.
+
+⚠ The 2026-05-13 spatial doubling was a geometric scaling, not empirically
+calibrated at 2K. Watch QC metrics on the first 2K keepers — if
+`transition_pct`, `preserved_drift_mean_abs`, or `mask_islands` drift out
+of the documented healthy ranges, manually retune pool / mask_blur /
+dilate rather than treating these defaults as locked. The 1K-era
+seed_calibration sweep has not been rerun at 2K.
 
 CLI:
   python composite_keeper.py \\
@@ -20,7 +38,7 @@ CLI:
     --output out/L3/archer_L3_v3_composited.png
 
   Optional:
-    --low 5 --high 15 --pool 8 --dilate 10 --mask-blur 3
+    --low 5 --high 15 --pool 16 --dilate 20 --mask-blur 6
     --qc-image out/L3/archer_L3_v3_qc.png    (debug visualization)
     --qc-json  out/L3/archer_L3_v3_qc.json   (metrics)
 
@@ -40,17 +58,28 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy.ndimage import gaussian_filter, maximum_filter
 
 
-# ---------- Defaults (locked 2026-05-05) ----------
+# ---------- Defaults ----------
+# Thresholds (intensity-based — dim-invariant): locked 2026-05-05.
 DEFAULT_LOW              = 5
 DEFAULT_HIGH             = 15
-DEFAULT_DIFF_POOL_SIGMA  = 8
-DEFAULT_MASK_BLUR_SIGMA  = 3
-DEFAULT_DILATE_EDIT_PX   = 10
+# Spatial knobs (pixel-space — scale with canvas dim):
+# 2026-05-05 1K-chain defaults were pool=8, mask_blur=3, dilate=10.
+# 2026-05-13 chain bumped to 2K, defaults doubled geometrically.
+# ⚠ NOT calibrated empirically at 2K — see header docstring; retune
+# manually if QC metrics on early 2K keepers drift out of healthy range.
+DEFAULT_DIFF_POOL_SIGMA  = 16
+DEFAULT_MASK_BLUR_SIGMA  = 6
+DEFAULT_DILATE_EDIT_PX   = 20
 
 
 # ---------- IO ----------
 
-def load_rgb(p: Path, size=(1024, 1024)) -> np.ndarray:
+def load_rgb(p: Path, size=(2048, 2048)) -> np.ndarray:
+    # NOTE 2026-05-13: default size bumped from (1024, 1024) to (2048, 2048)
+    # alongside the chain-dim bump. Mismatched inputs get LANCZOS-resized to
+    # this size, so a stray 1K file mixed into a 2K chain will be upscaled
+    # rather than dim-mismatch-crashing. Callers running an old 1K chain end-
+    # to-end can pass size=(1024, 1024) explicitly.
     img = Image.open(p)
     if img.mode == "RGBA":
         bg = Image.new("RGBA", img.size, (255, 255, 255, 255))

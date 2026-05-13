@@ -12,7 +12,7 @@ FIDELITY=""
 show_help() {
   echo "Usage: $0 --image-url URL --operation OP [options]"
   echo ""
-  echo "Operations: deblur, denoise, dehaze, fix-face, document"
+  echo "Operations: deblur, denoise, dehaze, fix-face, document, esrgan2x"
   echo ""
   echo "Options:"
   echo "  --image-url URL     Image URL (required)"
@@ -51,6 +51,7 @@ if [ -z "$MODEL" ]; then
     dehaze) MODEL="fal-ai/mix-dehaze-net";;
     fix-face) MODEL="fal-ai/codeformer";;
     document) MODEL="fal-ai/docres";;
+    esrgan2x) MODEL="fal-ai/esrgan";;
     *) echo "Error: Unknown operation: $OPERATION" >&2; exit 1;;
   esac
 fi
@@ -59,6 +60,9 @@ fi
 PAYLOAD="{\"image_url\": \"$IMAGE_URL\""
 if [ "$OPERATION" = "fix-face" ] && [ -n "$FIDELITY" ]; then
   PAYLOAD="$PAYLOAD, \"fidelity\": $FIDELITY"
+fi
+if [ "$OPERATION" = "esrgan2x" ]; then
+  PAYLOAD="$PAYLOAD, \"scale\": 2"
 fi
 PAYLOAD="$PAYLOAD}"
 

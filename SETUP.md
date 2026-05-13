@@ -3,7 +3,7 @@
 This repo ships two pipelines:
 
 - **Hero animation** (webapp + skill) — concepts → prompts → fal-seedance I2V → CorridorKey keying → align → deliver WebM → optional Drive upload.
-- **Unit progression** (skill-only, CLI-driven) — L1→L10 rank PNG ramps via `fal-ai/nano-banana-pro/edit` + NAFNet deblur + `composite-keeper` diff-mask.
+- **Unit progression** (skill-only, CLI-driven) — L1→L10 rank PNG ramps (2048×2048) via `fal-ai/nano-banana-pro/edit` + ESRGAN 2× cleanup saved at 2K (default; NAFNet deblur on the ESRGAN-upscaled raw as fallback) + `composite-keeper` diff-mask. Chain runs at 2K throughout (LOCKED 2026-05-13).
 
 > **For an interactive guided setup, run `/setup` in Claude Code from the repo root.** This document is the static reference covering the same ground.
 
@@ -33,7 +33,7 @@ Used by `HeroAnimation/scripts/compose_frames.py`, `detect_anchors.py`, `deliver
 cd "<repo root>"
 python -m venv .venv
 .venv\Scripts\activate
-pip install pillow numpy imageio imageio-ffmpeg
+pip install pillow numpy imageio imageio-ffmpeg opencv-python scipy
 ```
 
 ### macOS / Linux
@@ -41,10 +41,12 @@ pip install pillow numpy imageio imageio-ffmpeg
 cd <repo-root>
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pillow numpy imageio imageio-ffmpeg
+pip install pillow numpy imageio imageio-ffmpeg opencv-python scipy
 ```
 
-Verify by activating the venv and running `python -c "import PIL, numpy, imageio; print('ok')"`.
+Verify by activating the venv and running `python -c "import PIL, numpy, imageio, cv2, scipy; print('ok')"`.
+
+> **Why each dep:** `pillow`/`numpy`/`imageio`/`imageio-ffmpeg` for frame I/O and delivery encoding; `opencv-python` (cv2) for `compose_frames.py` + `detect_anchors.py`; `scipy` for `composite-keeper`'s diff-mask filters.
 
 ---
 
@@ -142,7 +144,7 @@ Edit `webapp/.env.local`. The required-for-functionality vars:
 
 | Var | What it is | Required for |
 |---|---|---|
-| `FAL_KEY` | Your fal.ai API key | All generation (hero seedance, unit nano-banana-pro/edit, NAFNet) |
+| `FAL_KEY` | Your fal.ai API key | All generation (hero seedance, unit nano-banana-pro/edit, ESRGAN cleanup, NAFNet fallback) |
 | `HEROANIM_ROOT` | Absolute path to `HeroAnimation/` | All hero pipeline ops (default works for the standard checkout) |
 | `BASH_BIN` | Absolute path to Git Bash | Windows only — defaults to `C:/Program Files/Git/usr/bin/bash.exe` |
 | `KEYCLIPS_PYTHON` | Path to EZ-CorridorKey's venv python | Hero keying. Default = sibling-of-repo install. Windows: `<parent-of-repo>/EZ-CorridorKey/.venv/Scripts/python.exe`. macOS/Linux: `<parent-of-repo>/EZ-CorridorKey/.venv/bin/python`. |
@@ -202,7 +204,7 @@ The unit-progression pipeline is **agent-driven, no webapp**. From Claude Code i
 The skill reads `UnitProgression/Cavalry/CLAUDE.md` and walks through generating a level by:
 1. Uploading the prior composite to fal CDN
 2. POSTing to `fal-ai/nano-banana-pro/edit`
-3. NAFNet deblur on the locked keeper
+3. Cleanup pass on the locked keeper (default = ESRGAN 2× supersample at `fal-ai/esrgan` saved at 2048×2048 as-is — chain runs at 2K; NAFNet deblur on the ESRGAN-upscaled raw as fallback when the user reports ESRGAN issues). Pre-flight: if `UnitProgression/<Unit>/Refs/L1_Base.png` is not 2K, ESRGAN-upscale it once at chain start and back up the original as `L1_Base_<orig-size>.png`.
 4. Running `composite-keeper` against the prior level
 5. Inspecting QC and chaining forward
 
