@@ -1,0 +1,21 @@
+{
+  "mask_avg_pct": 83.5,
+  "transition_pct": 5.04,
+  "preserved_drift_mean_abs": 0.024,
+  "edit_signal_mean_abs": 39.215,
+  "edit_fidelity_mean_abs": 0.12,
+  "mask_islands": 3,
+  "warnings": [],
+  "params": {
+    "low": 15.0,
+    "high": 35.0,
+    "diff_pool_sigma": 12.0,
+    "mask_blur_sigma": 3.0,
+    "dilate_edit_px": 20
+  },
+  "paths": {
+    "L_raw": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Cavalry\\out\\v3\\L7\\composite\\cavalry_L7_v1_denoise.png",
+    "L_input": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Cavalry\\out\\v3\\L6\\composite\\cavalry_L6_v2_composited.png",
+    "output": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Cavalry\\out\\v3\\L7\\composite\\cavalry_L7_v1_composited.png"
+  }
+}

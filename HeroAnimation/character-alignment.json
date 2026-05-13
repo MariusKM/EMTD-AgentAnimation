@@ -1,0 +1,26 @@
+{
+  "$schema": "https://emtd/character-alignment.schema.json",
+  "description": "Normalized (0-1) target positions measured from character-alignment.png. Pipeline-resolution-independent: applies to 960x960 dev output and 550x550 final delivery alike. Use scale_template.py to generate an overlay PNG at any resolution.",
+  "eyeLevelY": 0.41,
+  "groundY": 0.88,
+  "centerX": 0.50,
+  "eyeRangeHalfWidth": 0.15,
+  "outputCanvas": {
+    "mode": "source"
+  },
+  "sizeFactors": {
+    "small": 1.0,
+    "medium": 1.1,
+    "large": 1.2
+  },
+  "_heroSizesNote": "Per-hero size category. Heroes not listed default to 'medium'. Compose applies sizeFactors[size] as a multiplier on the alignment scale, anchored at the ground line — characters all stand on the same in-game floor; larger ones grow upward from there.",
+  "heroSizes": {
+    "Blacksmith": "large",
+    "Count_Wilhelm": "large",
+    "Fat_King": "large",
+    "Fat_Princess": "small",
+    "Architect": "small",
+    "Princess_Sweet": "small",
+    "Merchant": "large"
+  }
+}

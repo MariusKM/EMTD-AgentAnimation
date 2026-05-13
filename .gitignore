@@ -1,0 +1,73 @@
+# Binary assets ARE tracked in this repo (updated 2026-05-13).
+# The only locations where binaries are not tracked are pipeline output
+# directories that contain regenerable or heavyweight deliverables:
+#   - HeroAnimation/Output/   (per-hero generation pipeline output)
+#   - HeroAnimation/Examples/ (reference example videos)
+
+# Pipeline output: ignore everything inside, keep editorial docs
+HeroAnimation/Output/**
+!HeroAnimation/Output/**/
+!HeroAnimation/Output/*/concepts.md
+!HeroAnimation/Output/*/prompts.md
+!HeroAnimation/Output/*/Prompts/**/*.md
+!HeroAnimation/Output/*/*_FFLF_*.png
+
+# Example reference videos: ignore everything, keep companion .md notes
+HeroAnimation/Examples/**
+!HeroAnimation/Examples/**/
+!HeroAnimation/Examples/*.md
+
+# Webapp scratch logs
+webapp/scripts/*.log
+
+# ML model checkpoints (large, download separately)
+HeroAnimation/models/
+
+# Temp files from frame extraction
+emtd_frames_*/
+
+# Working / scratch state
+.tmp/
+
+# UnitProgression experimental runs (regenerable scratch — not part of
+# the tracked binary policy; never useful to commit)
+UnitProgression/*/experiments/
+
+# Kling AI
+.config/kling/
+*.credentials
+
+# Secrets / service account keys
+HeroAnimation/env/
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# Working PSDs / scratch images / ad-hoc comparisons (explicitly named,
+# kept out of tracking regardless of binary policy)
+HeroAnimation/HeroScreen.psd
+HeroAnimation/photo_*.jpg
+/Scale_Compare.*
+
+# Environment / secrets
+.env
+.env.*

@@ -1,0 +1,23 @@
+{
+  "level": "L7",
+  "variant_set": "reproducible",
+  "variant_index": 3,
+  "seed": 580683077,
+  "request_id": "019e0813-9eea-70f3-9d3f-750b9a11e012",
+  "submitted_at": "2026-05-08T14:52:44.317Z",
+  "prompt_file": "Cavalry/Prompts/cavalry_edit_L6_to_L7.json",
+  "prompt_sha256": "4d34a79fbc12d8fe19a33b0c993bec5800fe335609eef836982a317d4b661526",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9965ab/r9DhttPKBp1pBsvJEM7gZ_cavalry_L6_v2_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Cavalry/out/v3/L6/composite/cavalry_L6_v2_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "cavalry_L7_v3.png"
+  ]
+}

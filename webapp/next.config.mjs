@@ -1,0 +1,7 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: false,
+  experimental: { serverActions: { bodySizeLimit: "10mb" } },
+  serverExternalPackages: ["better-sqlite3"],
+};
+export default nextConfig;

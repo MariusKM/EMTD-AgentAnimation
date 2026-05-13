@@ -1,0 +1,50 @@
+SEEDANCE 2.0 — PROMPT EXAMPLES
+================================
+
+SINGLE SHOT EXAMPLE
+-------------------
+  Subject:     woman in a red coat
+  Action:      walks past a vintage car, stops, touches the wet window, exhales
+  Camera:      35mm, medium -> slow push-in to close, shallow DOF, handheld
+  @Refs:       img1 = character/look, vid1 = movement pace, audio1 = rain ambience
+  Style:       moody cinematic, neon bokeh, subtle film grain
+  Sound:       rain room tone, no music, no VO
+  Constraints: no text/logos, no extra people, no warped hands/face, 8-10s
+
+
+MULTI-SHOT EXAMPLE (3-shot rural cooking scene)
+------------------------------------------------
+Global blocks defined once. Refs used inline within each shot's Action/Visuals.
+
+[Style]
+Modern rural aesthetic, cinematic commercial quality, shot on Sony A7S3, 4K ultra-clear,
+natural transparent lighting, healing ASMR feel, no historical costume drama.
+
+[Scene]
+A well-maintained modern farmhouse open kitchen. Background: lush vegetable garden,
+bright sunshine.
+
+[Character]
+Modern rural creator, black long hair casually tied with a wooden hairpin, dark blue linen
+outfit, clear makeup, focused and peaceful expression.
+
+[@Refs]
+@image1 = character appearance/face, @image2 = kitchen and scene environment, @audio1 = ASMR nature ambience
+
+[Shot Details]
+
+[00:00-00:05] Shot 1: Morning Harvest
+Visuals: Extreme close-up. Morning side-backlight hits the plants.
+Action: @image1's bare hands pick a bright red tomato with glistening dew drops from the vine.
+Details: Razor-sharp focus on tomato fuzz and sliding water droplets. @image2 blurred in background.
+
+[00:05-00:10] Shot 2: Craftsmanship
+Visuals: @image2 indoor stove area, full of life but spotless.
+Action: @image1 cuts vegetables with skilled, precise movements. Macro captures knife slicing
+through ingredients, juice splattering. Cut to orange flame in earthen stove, warm and real.
+Details: Non-performative naturalism. Light and shadow warm and grounded.
+
+[00:10-00:15] Shot 3: Tranquil Moment
+Visuals: Full shot into medium shot of @image2 yard table setting.
+Action: @image1 sits down quietly, gently tidies a stray hair, takes a quiet bite.
+Details: Steam rises slowly against backlight. Near silence — you can almost hear the wind.

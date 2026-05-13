@@ -1,0 +1,25 @@
+{
+  "level": "L4",
+  "variant_set": "v3_chained_tier_break",
+  "variant_index": 4,
+  "seed": 1656164221,
+  "request_id": "019e0315-3c85-7dd0-84ac-80bc5f066e23",
+  "submitted_at": "2026-05-07T15:36:22Z",
+  "prompt_file": "UnitProgression/Archer/Prompts/archer_edit_L3_to_L4.json",
+  "prompt_sha256": "651a8933fb5c45f89bec545621b353264667f4282b7a04879f601981c07d3a15",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9944f0/6uvWTgFknKN0b8-X6q_TJ_archer_L3_v4_composited.png",
+    "https://v3b.fal.media/files/b/0a9944f0/32CB9AbFFXV8dEoPNy4CX_L1_Base.png"
+  ],
+  "input_files": [
+    "UnitProgression/Archer/out/v3/L3/composite/archer_L3_v4_composited.png",
+    "UnitProgression/Archer/Refs/L1_Base.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "archer_L4_v4.png"
+  ]
+}

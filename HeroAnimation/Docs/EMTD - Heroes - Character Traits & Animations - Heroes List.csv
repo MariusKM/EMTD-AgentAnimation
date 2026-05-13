@@ -1,0 +1,183 @@
+Basic Information,,,Name & Loca,,,,,ROFB Stats,,,,,Minigame Skill Descriptions,,,Animations,,,,,,
+Hero ID,Picture,ID,Name,Translation,"Role, Job, Traits",unit_type,grade,ROFB Equivalent,L1 ATK/DEF/HP,Max Lvl,Max ATK/DEF/HP,Skill Theme,Skill 1,Skill 2,Skill 3,Hero screen animation,Movement Style,Victory Animation - Minigame,Defeat/Death Animation - Minigame,Default Attack Style - Minigame,Silviu notes,Notes
+101,,Count_Wilhelm,Count Wilhelm,TEXT_4559,"Player's mentor &  old veteran
+- Wise
+- Guiding and nuturing
+- Stern if needed
+
+
+",infantry,epic,,27 / 28 / 530,80,2100 / 2200 / 41000,⚙️ EMTD Infantry tank (Kingshot-style),,,,"He stands tall, leaning one hand on his halberd, and slowly strokes his beard while nodding thoughtfully at the player.","- Medium movement speed
+- Physically strong
+- Surprisingly fast actions","Leans on his halberd, stroking his beard thoughtfully and giving a stern but approving nod.","Kneels down, leaning on his halberd before collapsing sideways","- Medium attack speed
+- Long melee range
+- Professional fighter
+- Stabs and swings of halbers",Strong 2 handed tank with swipe and stab attacks,
+102,,,,,,,,,,,,,,,,,,,,,,
+103,,Spy,Anon Nymous,TEXT_4563,"Player's spy master
+
+- Face inspired by the trollface-meme
+- Sneaky character in charge of espionage and sabotage
+- Shifty character, still loyal to player
+- Uses dirty tricks",archer,epic,Rodric ,43 / 6 / 252,100,3768 / 277 / 12303,Roar + ATK-down Aura + Death Knight DEF,,,,"He crouches in a slouched, sneaky pose, looks directly at the camera with a wide ""trollface"" grin, and gives a mischievous chuckle.","- Fast movements, but no grace
+- Walks slouched, as if sneaking","Chuckles gleefully with a trollface grin, looking firectly at the camera to break the fourth wall","Trips comically and falls flat on his face.
+
+Alternative: Disappears in a puff of smoke, not really dead?","- Medium attack speed
+- Relaod animation between shots: lower crossbow, insert arrow, aim crossbow
+
+- Professional fighter","Uses dirty AoE attacks like smoke and poison bombs, poison attacks etc. Goes stealth, and strikes backline heroes",
+301,,Diana,Diana,TEXT_4573,"Rebel leader, sometimes ally of player
+
+- Passioante and hot-headed
+- Short temper
+- Courageous and natural leader
+
+",cavalry,legendary,Maria,11 / 5 / 120,100,1001 / 203 / 912,Blessing of Healing + Detect + Ogre DEF,"Wildlands Whirlwind
+
+Animation:
+- Diana spins towards the enemies in a whirlwind attack with both bladed.
+- Fast, aggressive spin
+- Slight forward momentum (not stationary)
+- Dust / dirt kick-up (wildlands flavor)
+
+Effect:
+- Attack * {0}% 
+- Area of Effect damage. 
+- Slight radial enemy pushback","Marked for Death
+
+Animation:
+- Diana slashes and points her sword at the enemy in challenge/judgement:
+- Quick aggressive gesture (blade slash toward enemy group)
+- Visual: mark symbol / glowing outline on enemies
+
+Effect:
+- All enemies in target area have Defense reduced by X% for Y seconds","Rally Cry
+
+Animation:
+- Diana raises her sword and lets out a mighty Highlander Warcry
+- Strong shout / stomp / weapon raise
+Nearby units react slightly
+
+Effect:
+- Increase crit rate by X% for Y seconds for Diana and her escorts","She performs a quick, graceful flourish with her sword, finishing by punching her fist into the air with a confident and passionate expression.","- Fast and quick movements and attacks
+- Gracefull
+- More finess than brute strength","Raises her sword high with a passionate battle cry, pumping her fist in the air.","Stumbles back before falling.
+
+Optional: drops sword","- Fast attack speed
+- Medium melee range
+- Professional fighter
+- Stabs and slashes with sword","Dual wielder, attacks with both swords, performs whirlwind attacks",
+302,,,,,,,,,,,,,,,,,,,,,,
+501,,Moneybags,Moneybags,TEXT_4581,"Player's tax collector
+
+- Greed, constantly wants more money
+- Arrogant, makes fun of those he takes money from
+- Really enjoys his job",infantry,rare,Haral,41 / 6 / 240,100,3589 / 264 / 11718,Hero ATK + Ogre ATK + Stunning Blow,Money Shot,,,"He leans back arrogantly, tossing his coin bag into the air and catching it with a greedy, satisfied grin.","- Medium speed, faster than Gusto",Arrogantly waves his coin bag up and down,Clutches his coin bag tightly as he falls to his knees and then lands on his stomach,"- Medium attack speed
+- Reloading animation between shots
+- Load gun through muzzle, aim, shoot
+- Puff of smoke after shooting?
+
+- Not a professional warrior",Fires coins from his weapon and unleashes AoE coin attacks using his coin bag. He goes into tax collecting mode. the longer the fight last the stronger he gets.,
+601,,Herald,Lumbricus,TEXT_11609,"Herald of the Emperor
+
+Announces events, contest, and any edicts by his imperial majesty
+
+Described as ""if the concept of bureaucracy took human form""",archer,rare,,,,,,,,,"He stands in a stiff, bureaucratic posture, quickly unrolls a small section of a scroll, and makes a swift, jerky scribbling motion with a quill.","fast but stiff, lanky",Unrolls his scroll and scribbles down on it.,"Faints stiffly like a board backwards
+
+Optional: Drops scroll",,"Ranged caster who reads from a scroll to buff allies, while a quill acts as a homing projectile, rapidly attacking multiple targets or piercing through to the backline",
+701,,Fat_king,King Ludwig,TEXT_26960,"Nobleman of the Empire
+
+- Fabulously rich
+- Always elegant
+- Jolly Fellow
+- Very generous
+- Always bored, looking for entertainment",,,,,,,,,,,"He stands with a jolly expression, patting his large stomach with both hands while letting out a hearty, wobbling laugh.","- Very heavy body
+- Very slow movements
+- More rolling than walking","Lets out a jolly belly laugh, one hand on his tummy","Wobbles comically from leg to leg, then falls flat on his back, laying with limps spread out.","- Slow attack speed
+- Medium to long melee attack range
+- Stabbing or smashing with croissant pole-arm","Two-handed support unit that summons a feast at the beginning of the fight, buffing all allies",
+1101,,Princess_Sweet,Prioncess Fiorella,TEXT_19163,"Princess of the Empire
+
+- The ""ideal"" princess
+- Gentle and sweet and generous
+- Refined and skilled
+- Feminine, but has a hidden tomboy hdden inside",cavalry,rare,,,,,,,,,"She gives a gentle, refined smile and a slow, feminine wave towards the screen.","- Fast movements, with grace
+- Light body weight",Gives a gentle smile and wave,"Sinks to the ground gracefully, hands together as if in prayer, before collapsing to her side",,"A debuffer hero who slows and weakens enemies, and can grant a thorns effect to an allied tank. When casting, vines wrap around her hands and body, channeling thorn-themed magic",
+1201,,Architect,Master Wright,TEXT_19164,"Architect
+- Serious & No-nonsense
+- Professional
+- Sometimes overcome by bouts of explosive emotions",infantry,epic,,,,,,,,,"He stands stiffly, adjust his glasses with one hand, and then leans forward slightly as if inspecting a blueprint held in his other hand, looking professional and serious.","- Medium speed of movements and actions
+- Medium body weight","Crosses arms professionally, pushes glasses up his nose","Drops to his knees, falls on his face, 
+
+optional: dropping his blueprints.","- Medium attack speed
+- Short melee range
+- Not a a professional fighter
+- Stabs and slashes","Short-range hero who uses scrolls to cast protective spells on himself and allies, and can summon walls to block ranged attacks",
+1301,,General,Sir Ulrich,TEXT_33344,"Player's main military advisor
+
+- Stoic and no-nonsense
+- Enjoys combat and skills of arms
+",cavalry,epic,,,,,,,,,"He stands at attention with a stoic expression, then performs a sharp, confident military salute.","- medium weight and movement speed due to armor
+- Big strides, walks with confidence","Stoically sheathes his sword, standing at attention with a confident, victorious salute.",Salutes weakly before collapsing forward.,"-medium attack speed
+- Medium melee attack range
+- Stabs and slashes with sword, slower but more powerful than Diana",Melee support unit that grants powerful buffs to nearby allies,
+1501,,Merchant,Gusto,TEXT_33347,"Resource merchant, sells to player
+
+Jolly fellow
+fair trader
+gives nothing away for free, but also not steal or cheat, and step up to defend fellow citizens",archer,rare,,,,,,,,,"He gives a jolly wave and then proudly shakes his gun, as if showing off his wares or defense equipment.","- Medium to slow due to weight of body, basket, and gun",Happily shakes his gun,"Falls backwards on his butt, heads falsl down on his chest
+
+Optional: drops gun","- Medium to slow attack speed
+- Reloading animation between shots
+- Load gun through muzzle, aim, shoot
+- Puff of smoke after shooting?
+
+- Not a professional warrior","Uses different foods as ammo, firing rapid apples, launching AoE melon attacks, and deploying sticky honey that slows enemies",
+2401,,Blacksmith,Brandt,TEXT_46612,"Weapons Smith
+- Gruff
+- Direct
+- High Physicals strength
+
+
+- Less of a professional fighter",infantry,rare,,,,,,,,,"He rests his heavy hammer on his shoulder, then wipes sweat from his forehead with the back of his hand, letting out a gruff, satisfied exhale.","- Slow speed of movements and action
+- Physically strong and powerful
+- Direct movements withmut much finess","Slams his hammer onto the ground, wiping sweat from his brow with a gruff, satisfied nod.","Falls backwards heavily
+
+Optional: dropping his hammer.","- Slow attack speed
+- Medium Melee range
+- Not a a professional fighter
+- Powerful swings of hammer",Melee unit that summons a magical anvil and strikes it to boost nearby allies’ attack or weaken enemy armor,
+2701,,Fat_Princess,Princess Beatrice,TEXT_47536,"Princess of the Empire
+
+- Gluttenous
+- Very sweet demeanor
+- Scary when angry",infantry,epic,,,,,,,,,"She gives a sweet, graceful curtsy, then suddenly pulls out her spoon and gleefully licks it with a wide smile.","- Heavy body but surprisingly graceful
+- Slower movements but not as slow as fat_king","Sweetly curtsies, then gleefully licks her spoon","Falls forward flat on her face
+
+- Optonal: Drops spoon","-medium attack speed (graceful)
+- Medium melee attack range
+- Smashing with spoon club","Melee AoE unit that consumes cakes to gain random buffs, including speed boosts and growth, dealing AoE damage and briefly becoming immune while regenerating health",
+2801,,Princess_Arrogant,Princess Augusta,TEXT_47535,"Princess of the Empire
+
+-Arrogant and nagging
+- Very self-centered and demanding",cavalry,epic,,,,,,,,,"She snaps her fans open and haughtily fans herself, tilting her nose up and looking away with a demanding expression.","- Fast movements, with grace
+- Light body weight","Haughtily fans herself, hiding her face behind fans, nose held high.","Faints dramatically, throwing a hand over her forehead while falling back","- Fast attack speed
+- Short melee range
+- Slashes with both fans
+
+- Not a a professional fighter","Agile hero who unleashes whirlwind attacks, lifts into the air and dashes down with spinning fan strikes",
+3101,,Dragonwitch,Yigris,TEXT_48493,"Anatagonist, leader of the dragon cult
+
+- Mocking and cruel
+- Self-centered
+- Wicked, treacherous and smart",archer,legendary,,,,,,,,,"She struts forward arrogantly, twirling a small flame between her fingers, and then lets out a short, mocking laugh while striking a pose.","- Fast movements, graceful and quick
+- Either arrogantly strutting, OR bend-over as if to sneak up on enemies","Laughs mockingly while twirling a flame around her fingers, striking an arrogant pose.",Reaches out dramatically in disbelief before collapsing on her back.,"- Fast attack speed
+- Short attack range with 
+- punch with flame or stab with dagger
+- Professional fighter","Ranged spellcaster who unleashes AoE spells such as curses, fire breath, summon magic dragon and other magical attacks",
+n/a (Governor),,NewKing,King Eric,,"Player's character
+
+- Also known as the Builder
+- Military and administratve leader",-,-,,,,,,,,,"He stands confidently, checking the mechanism of his pistol before looking forward with a determined leader’s gaze.","- Medium to fast movement 
+- Should also be armed with a pistol, 
+
+final details tbd",tbd,"not needed, player character does not die",- Professional fighter,"Begins the fight with ranged attacks from behind using a minigun, then switches to a two-handed sword when enemies get close",

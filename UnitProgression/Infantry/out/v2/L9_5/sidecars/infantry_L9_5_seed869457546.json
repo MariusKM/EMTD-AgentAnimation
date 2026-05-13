@@ -1,0 +1,23 @@
+{
+  "level": "L9_5",
+  "variant_set": "reproducible",
+  "variant_index": 1,
+  "seed": 869457546,
+  "request_id": "019e04f9-b7e7-7c82-a6dd-400f75fb77e1",
+  "submitted_at": "2026-05-08T00:25:35.754Z",
+  "prompt_file": "Infantry/Prompts/infantry_edit_L9_to_L9_5.json",
+  "prompt_sha256": "f8dd9183b21c7bef9f64f35d090eefb29628b024f10712ba5f3655a78a836040",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a995159/csHx09XaCDKn0wytFG9vu_infantry_L9_v1_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Infantry/out/v2/L9/composite/infantry_L9_v1_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "infantry_L9_5_v1.png"
+  ]
+}

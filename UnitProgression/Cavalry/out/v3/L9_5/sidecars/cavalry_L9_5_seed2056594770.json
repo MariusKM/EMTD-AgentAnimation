@@ -1,0 +1,23 @@
+{
+  "level": "L9_5",
+  "variant_set": "reproducible",
+  "variant_index": 4,
+  "seed": 2056594770,
+  "request_id": "019e0849-8a96-7be2-b9bc-c46e2fda7aa9",
+  "submitted_at": "2026-05-08T15:51:37.745Z",
+  "prompt_file": "Cavalry/Prompts/cavalry_edit_L9_to_L9_5.json",
+  "prompt_sha256": "93936eeb056bd628fabf619d1f3e0a2fe3ba249dff6351cdb0dfdd62336bd8b9",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9966a7/8Fu_9U_giSO7XV8ThbqsM_cavalry_L9_v1_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Cavalry/out/v3/L9/composite/cavalry_L9_v1_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "cavalry_L9_5_v4.png"
+  ]
+}

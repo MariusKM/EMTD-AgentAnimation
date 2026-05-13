@@ -1,0 +1,21 @@
+{
+  "mask_avg_pct": 90.52,
+  "transition_pct": 3.84,
+  "preserved_drift_mean_abs": 0.05,
+  "edit_signal_mean_abs": 40.552,
+  "edit_fidelity_mean_abs": 0.169,
+  "mask_islands": 5,
+  "warnings": [],
+  "params": {
+    "low": 10.0,
+    "high": 25.0,
+    "diff_pool_sigma": 8.0,
+    "mask_blur_sigma": 3.0,
+    "dilate_edit_px": 10
+  },
+  "paths": {
+    "L_raw": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Archer\\out\\v4\\L8\\composite\\archer_L8_v1_denoise.png",
+    "L_input": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Archer\\out\\v4\\L7\\composite\\archer_L7_v4_composited.png",
+    "output": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Archer\\out\\v4\\L8\\composite\\archer_L8_v1_composited.png"
+  }
+}

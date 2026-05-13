@@ -1,0 +1,23 @@
+{
+  "level": "L4",
+  "variant_set": "reproducible",
+  "variant_index": 1,
+  "seed": 166332993,
+  "request_id": "019e06f9-a5fc-7882-a1a1-11c4719f7c20",
+  "submitted_at": "2026-05-08T09:44:44.844Z",
+  "prompt_file": "Cavalry/Prompts/cavalry_edit_L3_to_L4.json",
+  "prompt_sha256": "33e10cd5ff523bf128b0d30581dc124a2d0b6bfb2bb198ec60d40219fd0c17ba",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a995e73/rjiCpyQ-H60sXQ5cKc8E3_cavalry_L3_v1_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Cavalry/out/v3/L3/composite/cavalry_L3_v1_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "cavalry_L4_v1.png"
+  ]
+}

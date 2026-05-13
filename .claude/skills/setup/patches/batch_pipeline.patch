@@ -1,0 +1,677 @@
+diff --git a/scripts/batch_pipeline.py b/scripts/batch_pipeline.py
+new file mode 100644
+index 0000000..8157f27
+--- /dev/null
++++ b/scripts/batch_pipeline.py
+@@ -0,0 +1,671 @@
++"""Headless batch pipeline: video(s) -> EXR -> alpha hint -> inference -> cleanup.
++
++Drives backend.CorridorKeyService directly (no GUI). For each input video:
++    1. Create a v2 project under Projects/
++    2. Extract the video to an EXR DWAB frame sequence
++    3. Run BiRefNet or GVM to produce an alpha hint
++    4. Run CorridorKey inference, writing outputs to --output-dir
++    5. Optionally delete the project folder to reclaim disk space
++
++Usage:
++    python scripts/batch_pipeline.py --input path/to/video.mp4 --output-dir D:/keys
++    python scripts/batch_pipeline.py --input path/to/folder --alpha gvm --output-dir D:/keys
++    python scripts/batch_pipeline.py --input a.mp4 b.mp4 --keep-project
++
++Run from the repo root (or with the repo on sys.path) after activating the
++project's venv so torch/CUDA and all modules resolve.
++"""
++from __future__ import annotations
++
++import argparse
++import logging
++import os
++import shutil
++import sys
++from pathlib import Path
++
++# Must be set before any cv2 import
++os.environ.setdefault("OPENCV_IO_ENABLE_OPENEXR", "1")
++
++REPO_ROOT = Path(__file__).resolve().parent.parent
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from backend import (
++    CorridorKeyService,
++    InferenceParams,
++    OutputConfig,
++    create_project,
++    scan_project_clips,
++    save_custom_output_dir,
++    is_video_file,
++)
++from backend.ffmpeg_tools import extract_frames
++from backend.project import set_app_dir
++
++import cv2
++import numpy as np
++
++logger = logging.getLogger("batch_pipeline")
++
++VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv", ".mxf", ".webm", ".m4v")
++
++
++def collect_videos(inputs: list[str]) -> list[Path]:
++    """Expand files/folders into a sorted list of video paths."""
++    out: list[Path] = []
++    for item in inputs:
++        p = Path(item).expanduser().resolve()
++        if p.is_dir():
++            out.extend(sorted(c for c in p.iterdir() if c.is_file() and is_video_file(c.name)))
++        elif p.is_file() and is_video_file(p.name):
++            out.append(p)
++        else:
++            logger.warning("Skipping non-video input: %s", p)
++    return out
++
++
++def _progress_cb(stage: str):
++    last = [-1]
++
++    def cb(name, cur, total, *_, **__):
++        if total <= 0:
++            return
++        pct = int(cur * 100 / total)
++        if pct != last[0] and pct % 5 == 0:
++            last[0] = pct
++            print(f"  [{stage}] {name}: {cur}/{total} ({pct}%)", flush=True)
++
++    return cb
++
++
++def _extract_progress():
++    last = [-1]
++
++    def cb(cur, total):
++        if total <= 0:
++            return
++        pct = int(cur * 100 / total)
++        if pct != last[0] and pct % 10 == 0:
++            last[0] = pct
++            print(f"  [extract] {cur}/{total} ({pct}%)", flush=True)
++
++    return cb
++
++
++def _parse_hex_color(s: str) -> tuple[int, int, int]:
++    """Parse a hex color (with or without leading #) into an (R, G, B) tuple."""
++    s = s.strip().lstrip("#")
++    if len(s) != 6:
++        raise ValueError(f"Expected a 6-digit hex color, got: {s!r}")
++    return int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
++
++
++def generate_chroma_hint(
++    video_path: str,
++    out_dir: str,
++    screen_rgb: tuple[int, int, int],
++    tolerance: float,
++    softness: float,
++    progress_cb=None,
++) -> int:
++    """Write a per-frame grayscale chroma matte PNG sequence (distance mode).
++
++    For each video frame, computes per-pixel Euclidean distance from the screen
++    color in 8-bit RGB space, then maps distance -> alpha via a soft ramp:
++        d <= tolerance            -> 0 (background)
++        d >= tolerance + softness -> 255 (foreground)
++        in between                -> linear ramp
++    """
++    os.makedirs(out_dir, exist_ok=True)
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"Could not open video: {video_path}")
++    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
++    r_t, g_t, b_t = screen_rgb
++    target = np.array([b_t, g_t, r_t], dtype=np.float32)  # OpenCV is BGR
++
++    count = 0
++    while True:
++        ok, frame = cap.read()
++        if not ok:
++            break
++        diff = frame.astype(np.float32) - target
++        dist = np.sqrt(np.sum(diff * diff, axis=2))  # HxW
++        # Soft ramp: 0 at tolerance, 1 at tolerance+softness
++        alpha = np.clip((dist - tolerance) / max(softness, 1e-6), 0.0, 1.0)
++        alpha_u8 = (alpha * 255).astype(np.uint8)
++        cv2.imwrite(os.path.join(out_dir, f"frame_{count:06d}.png"), alpha_u8)
++        count += 1
++        if progress_cb and count % 10 == 0:
++            progress_cb(count, total)
++    cap.release()
++    if progress_cb:
++        progress_cb(count, total or count)
++    return count
++
++
++def generate_chroma_hint_subtract(
++    video_path: str,
++    out_dir: str,
++    screen_channel: str = "green",
++    threshold: float = 0.3,
++    gamma: float = 1.0,
++    progress_cb=None,
++) -> int:
++    """Write a per-frame grayscale chroma matte PNG sequence (subtract mode).
++
++    Classic Ultimatte / Fusion Ultra Keyer 'Subtract Background' approach:
++    for a green screen, measures how much the green channel dominates the
++    other two (strength = G - max(R, B)), then maps that strength inversely
++    to alpha. Naturally produces soft alpha on semi-transparent trails,
++    motion blur, and green spill edges without explicit feathering.
++
++    For a blue screen, pass screen_channel='blue' (swaps roles of B and G).
++    """
++    os.makedirs(out_dir, exist_ok=True)
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"Could not open video: {video_path}")
++    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
++
++    count = 0
++    while True:
++        ok, frame = cap.read()
++        if not ok:
++            break
++        # OpenCV is BGR uint8; convert to float 0..1.
++        b = frame[..., 0].astype(np.float32) / 255.0
++        g = frame[..., 1].astype(np.float32) / 255.0
++        r = frame[..., 2].astype(np.float32) / 255.0
++        if screen_channel == "blue":
++            strength = np.clip(b - np.maximum(r, g), 0.0, None)
++        else:  # green (default)
++            strength = np.clip(g - np.maximum(r, b), 0.0, None)
++        alpha = 1.0 - np.clip(strength / max(threshold, 1e-6), 0.0, 1.0)
++        if gamma != 1.0:
++            alpha = np.power(alpha, gamma)
++        alpha_u8 = (alpha * 255).astype(np.uint8)
++        cv2.imwrite(os.path.join(out_dir, f"frame_{count:06d}.png"), alpha_u8)
++        count += 1
++        if progress_cb and count % 10 == 0:
++            progress_cb(count, total)
++    cap.release()
++    if progress_cb:
++        progress_cb(count, total or count)
++    return count
++
++
++def auto_sample_bg_box(
++    video_path: str,
++    patch_size: int = 40,
++    max_frames: int = 30,
++    pad: float = 0.02,
++) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:
++    """Sample background pixels from the 4 corners of a subset of frames and
++    return (r_range, g_range, b_range, lum_range) as min/max with a small pad.
++
++    Assumes the corners of each frame are pure background (true for hero
++    animations where the character is centered). The pad expands the measured
++    range slightly so slight BG variations don't escape the box.
++    """
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"Could not open video: {video_path}")
++    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
++    step = max(1, total // max_frames) if total else 1
++    rs, gs, bs, ls = [], [], [], []
++    idx = 0
++    while True:
++        ok, frame = cap.read()
++        if not ok:
++            break
++        if idx % step == 0:
++            h, w = frame.shape[:2]
++            ph = pw = min(patch_size, h // 4, w // 4)
++            corners = [(0, 0), (0, w - pw), (h - ph, 0), (h - ph, w - pw)]
++            for y0, x0 in corners:
++                patch = frame[y0:y0 + ph, x0:x0 + pw]
++                rgb = patch[..., ::-1].astype(np.float32) / 255.0
++                rs.append(rgb[..., 0].ravel())
++                gs.append(rgb[..., 1].ravel())
++                bs.append(rgb[..., 2].ravel())
++                ls.append(0.2126 * rgb[..., 0].ravel()
++                          + 0.7152 * rgb[..., 1].ravel()
++                          + 0.0722 * rgb[..., 2].ravel())
++        idx += 1
++    cap.release()
++
++    def _range(arrs):
++        a = np.concatenate(arrs)
++        return max(0.0, float(a.min()) - pad), min(1.0, float(a.max()) + pad)
++
++    return _range(rs), _range(gs), _range(bs), _range(ls)
++
++
++def generate_chroma_hint_box(
++    video_path: str,
++    out_dir: str,
++    r_range: tuple[float, float],
++    g_range: tuple[float, float],
++    b_range: tuple[float, float],
++    lum_range: tuple[float, float],
++    soft_range: float,
++    threshold_low: float,
++    progress_cb=None,
++) -> int:
++    """Write a per-frame grayscale chroma matte PNG sequence (box mode).
++
++    Mirrors DaVinci Resolve's ChromaKeyer in 'Chroma' mode:
++    a pixel is considered background if each of its R, G, B, and Rec.709
++    luminance values falls within its respective [lo, hi] range. A soft ramp
++    of width `soft_range` is applied at every range boundary, then the final
++    matte is re-mapped through `threshold_low` for hard cleanup.
++    """
++    os.makedirs(out_dir, exist_ok=True)
++    cap = cv2.VideoCapture(video_path)
++    if not cap.isOpened():
++        raise RuntimeError(f"Could not open video: {video_path}")
++    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
++    soft = max(soft_range, 1e-6)
++
++    def _inside_soft(v, lo, hi):
++        # Returns 1 anywhere in [lo, hi], 0 outside [lo-soft, hi+soft], linear ramp between.
++        out_dist = np.maximum(0.0, np.maximum(lo - v, v - hi))
++        return np.clip(1.0 - out_dist / soft, 0.0, 1.0)
++
++    count = 0
++    while True:
++        ok, frame = cap.read()
++        if not ok:
++            break
++        # BGR uint8 -> RGB float 0..1
++        rgb = frame[..., ::-1].astype(np.float32) / 255.0
++        r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
++        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b  # Rec.709
++
++        inside_bg = np.minimum(
++            np.minimum(_inside_soft(r, r_range[0], r_range[1]),
++                       _inside_soft(g, g_range[0], g_range[1])),
++            np.minimum(_inside_soft(b, b_range[0], b_range[1]),
++                       _inside_soft(lum, lum_range[0], lum_range[1])),
++        )
++        alpha = 1.0 - inside_bg
++        if threshold_low > 0.0:
++            alpha = np.clip((alpha - threshold_low) / max(1.0 - threshold_low, 1e-6), 0.0, 1.0)
++        alpha_u8 = (alpha * 255).astype(np.uint8)
++        cv2.imwrite(os.path.join(out_dir, f"frame_{count:06d}.png"), alpha_u8)
++        count += 1
++        if progress_cb and count % 10 == 0:
++            progress_cb(count, total)
++    cap.release()
++    if progress_cb:
++        progress_cb(count, total or count)
++    return count
++
++
++def merge_alpha_hints(dir_a: str, dir_b: str, out_dir: str) -> int:
++    """Pixel-wise max-merge of two grayscale matte sequences into out_dir.
++
++    Matches files by basename (stem). Output is always 8-bit grayscale PNG.
++    Missing pairs on either side are skipped.
++    """
++    os.makedirs(out_dir, exist_ok=True)
++    a_files = {os.path.splitext(f)[0]: f for f in os.listdir(dir_a)
++               if f.lower().endswith((".png", ".jpg", ".exr", ".tif", ".tiff"))}
++    b_files = {os.path.splitext(f)[0]: f for f in os.listdir(dir_b)
++               if f.lower().endswith((".png", ".jpg", ".exr", ".tif", ".tiff"))}
++    common = sorted(set(a_files) & set(b_files))
++    for stem in common:
++        a = cv2.imread(os.path.join(dir_a, a_files[stem]), cv2.IMREAD_GRAYSCALE)
++        b = cv2.imread(os.path.join(dir_b, b_files[stem]), cv2.IMREAD_GRAYSCALE)
++        if a is None or b is None:
++            continue
++        if a.shape != b.shape:
++            b = cv2.resize(b, (a.shape[1], a.shape[0]), interpolation=cv2.INTER_LINEAR)
++        merged = np.maximum(a, b)
++        cv2.imwrite(os.path.join(out_dir, f"{stem}.png"), merged)
++    return len(common)
++
++
++def process_video(
++    service: CorridorKeyService,
++    video: Path,
++    *,
++    alpha: str,
++    output_dir: Path,
++    inference_params: InferenceParams,
++    output_config: OutputConfig,
++    keep_project: bool,
++    copy_source: bool,
++    chroma_rgb: tuple[int, int, int] = (0, 255, 0),
++    chroma_tolerance: float = 40.0,
++    chroma_softness: float = 20.0,
++    chroma_mode: str = "distance",
++    chroma_auto: bool = False,
++    chroma_auto_pad: float = 0.02,
++    chroma_r_range: tuple[float, float] = (0.158568, 0.413697),
++    chroma_g_range: tuple[float, float] = (0.596389, 0.758705),
++    chroma_b_range: tuple[float, float] = (0.298295, 0.372436),
++    chroma_lum_range: tuple[float, float] = (0.394918, 0.698166),
++    chroma_soft_range: float = 0.0835,
++    chroma_threshold_low: float = 0.172,
++    chroma_subtract_threshold: float = 0.3,
++    chroma_subtract_gamma: float = 1.0,
++    chroma_subtract_channel: str = "green",
++) -> bool:
++    """Run the full pipeline for one video. Returns True on success."""
++    print(f"\n=== {video.name} ===", flush=True)
++
++    # 1. Project + clip
++    project_dir = create_project(str(video), copy_source=copy_source)
++    logger.info("Project: %s", project_dir)
++    try:
++        clips = scan_project_clips(project_dir)
++        if not clips:
++            raise RuntimeError(f"No clips found in {project_dir}")
++        clip = clips[0]
++
++        # 2. Extract frames
++        frames_dir = os.path.join(clip.root_path, "Frames")
++        os.makedirs(frames_dir, exist_ok=True)
++        # If copy_source=False, extract from the original video directly.
++        source_video = clip.input_asset.path if clip.input_asset else str(video)
++        print("  extracting frames...", flush=True)
++        extract_frames(
++            video_path=source_video,
++            out_dir=frames_dir,
++            on_progress=_extract_progress(),
++            on_recompress_progress=_extract_progress(),
++        )
++
++        # Rescan so ClipEntry picks up the new Frames/ as input_asset
++        clip = scan_project_clips(project_dir)[0]
++        if clip.input_asset is None:
++            raise RuntimeError("Frame extraction produced no input asset")
++
++        # 3. Redirect outputs to user's directory (keeps target clean of
++        #    the rest of the project bloat when we delete it later)
++        save_custom_output_dir(clip.root_path, str(output_dir))
++        clip = scan_project_clips(project_dir)[0]
++
++        # 4. Alpha hint
++        print(f"  generating alpha hint ({alpha})...", flush=True)
++        alpha_dir = os.path.join(clip.root_path, "AlphaHint")
++
++        use_birefnet = alpha in ("birefnet", "birefnet+chroma")
++        use_gvm = alpha in ("gvm", "gvm+chroma")
++        use_chroma = alpha in ("chroma", "birefnet+chroma", "gvm+chroma")
++
++        if use_birefnet:
++            service.run_birefnet(clip, on_progress=_progress_cb("birefnet"))
++        elif use_gvm:
++            service.run_gvm(clip, on_progress=_progress_cb("gvm"))
++
++        if use_chroma:
++            def _chroma_progress(cur, total):
++                if total > 0:
++                    print(f"  [chroma] {cur}/{total}", flush=True)
++
++            chroma_dir = os.path.join(clip.root_path, "AlphaHint_chroma")
++            # Chroma-key works best on the original 8-bit source video — avoids
++            # EXR linear/sRGB gamut confusion with the screen color.
++            if chroma_mode == "subtract":
++                print(f"  generating chroma hint (subtract mode, channel={chroma_subtract_channel}, "
++                      f"threshold={chroma_subtract_threshold}, gamma={chroma_subtract_gamma})...", flush=True)
++                generate_chroma_hint_subtract(
++                    source_video, chroma_dir,
++                    screen_channel=chroma_subtract_channel,
++                    threshold=chroma_subtract_threshold,
++                    gamma=chroma_subtract_gamma,
++                    progress_cb=_chroma_progress,
++                )
++            elif chroma_mode == "box":
++                r_range, g_range, b_range, lum_range = (
++                    chroma_r_range, chroma_g_range, chroma_b_range, chroma_lum_range,
++                )
++                if chroma_auto:
++                    print(f"  auto-sampling BG color box from corner patches (pad={chroma_auto_pad})...", flush=True)
++                    r_range, g_range, b_range, lum_range = auto_sample_bg_box(
++                        source_video, pad=chroma_auto_pad,
++                    )
++                    print(f"  auto BG box: R={r_range} G={g_range} B={b_range} L={lum_range}", flush=True)
++                print(f"  generating chroma hint (box mode, R={r_range}, G={g_range}, "
++                      f"B={b_range}, L={lum_range}, soft={chroma_soft_range}, "
++                      f"thresh_low={chroma_threshold_low})...", flush=True)
++                generate_chroma_hint_box(
++                    source_video, chroma_dir,
++                    r_range=r_range,
++                    g_range=g_range,
++                    b_range=b_range,
++                    lum_range=lum_range,
++                    soft_range=chroma_soft_range,
++                    threshold_low=chroma_threshold_low,
++                    progress_cb=_chroma_progress,
++                )
++            else:
++                print(f"  generating chroma hint (distance mode, key={chroma_rgb}, "
++                      f"tol={chroma_tolerance}, soft={chroma_softness})...", flush=True)
++                generate_chroma_hint(
++                    source_video, chroma_dir,
++                    screen_rgb=chroma_rgb,
++                    tolerance=chroma_tolerance,
++                    softness=chroma_softness,
++                    progress_cb=_chroma_progress,
++                )
++
++            if use_birefnet or use_gvm:
++                # Max-merge the subject hint with the chroma hint so VFX
++                # trails and gleams (which subject models miss) are preserved.
++                print("  merging subject hint with chroma hint (pixel-wise max)...", flush=True)
++                merged = merge_alpha_hints(alpha_dir, chroma_dir, alpha_dir)
++                print(f"  merged {merged} frames -> AlphaHint/", flush=True)
++            else:
++                # Chroma-only mode: make the chroma dir the alpha hint
++                if os.path.isdir(alpha_dir):
++                    shutil.rmtree(alpha_dir)
++                shutil.copytree(chroma_dir, alpha_dir)
++
++        if not (use_birefnet or use_gvm or use_chroma):
++            raise ValueError(f"Unknown alpha method: {alpha}")
++
++        # 5. Inference — need to rescan so alpha_asset is populated and
++        #    state transitions to READY are reflected on the entry
++        clip = scan_project_clips(project_dir)[0]
++        print("  running inference...", flush=True)
++        results = service.run_inference(
++            clip,
++            inference_params,
++            on_progress=_progress_cb("infer"),
++            output_config=output_config,
++        )
++        ok = sum(1 for r in results if r.success)
++        print(f"  -> {ok}/{len(results)} frames written", flush=True)
++        return ok == len(results)
++
++    finally:
++        if not keep_project:
++            logger.info("Cleaning up project: %s", project_dir)
++            shutil.rmtree(project_dir, ignore_errors=True)
++
++
++def parse_args() -> argparse.Namespace:
++    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    p.add_argument("--input", "-i", nargs="+", required=True,
++                   help="One or more video files or folders containing videos.")
++    p.add_argument("--output-dir", "-o", required=True,
++                   help="Directory where FG/Matte/Comp/Processed outputs will be written. "
++                        "Each clip gets its own subfolder.")
++    p.add_argument("--alpha",
++                   choices=("birefnet", "gvm", "chroma", "birefnet+chroma", "gvm+chroma"),
++                   default="birefnet+chroma",
++                   help="Alpha hint method (default: birefnet+chroma). The '+chroma' modes "
++                        "generate a chroma-key matte from the screen color and "
++                        "pixel-wise max-merge it with the subject hint so VFX "
++                        "trails / gleams are preserved.")
++    p.add_argument("--chroma-key", default="00FF00",
++                   help="Hex screen color for chroma modes (default: 00FF00). "
++                        "EMTD Seedance output uses 00FF38.")
++    p.add_argument("--chroma-tolerance", type=float, default=40.0,
++                   help="Max RGB distance from the screen color counted as background (default: 40).")
++    p.add_argument("--chroma-softness", type=float, default=20.0,
++                   help="Width of the soft-edge ramp between background and foreground (default: 20).")
++    p.add_argument("--chroma-mode", choices=("distance", "box", "subtract"), default="subtract",
++                   help="subtract (default) = Ultimatte / Fusion-style color-difference keyer: "
++                        "alpha = 1 - clip((G - max(R,B)) / threshold, 0, 1). Produces naturally soft "
++                        "alpha on motion trails, VFX, and spill edges. "
++                        "box = Resolve-style per-channel RGB+luminance bounding box with soft edges. "
++                        "distance = simple Euclidean distance from a single screen color.")
++    p.add_argument("--chroma-auto", action="store_true",
++                   help="Box mode: auto-derive the RGB+luma ranges by sampling BG pixels from the "
++                        "4 corners of the source video. Overrides --chroma-*-range. Best for "
++                        "videos where corners are guaranteed to be pure background.")
++    p.add_argument("--chroma-auto-pad", type=float, default=0.02,
++                   help="Box auto mode: amount to expand each measured range (default 0.02).")
++    p.add_argument("--chroma-r-range", default="0.158568,0.413697",
++                   help="Box mode: R range low,high in 0..1 (default matches the Resolve keyer for EMTD).")
++    p.add_argument("--chroma-g-range", default="0.596389,0.758705",
++                   help="Box mode: G range low,high in 0..1.")
++    p.add_argument("--chroma-b-range", default="0.298295,0.372436",
++                   help="Box mode: B range low,high in 0..1.")
++    p.add_argument("--chroma-lum-range", default="0.394918,0.698166",
++                   help="Box mode: Rec.709 luminance range low,high in 0..1.")
++    p.add_argument("--chroma-soft-range", type=float, default=0.0835,
++                   help="Box mode: soft-edge width per channel in 0..1 (default 0.0835).")
++    p.add_argument("--chroma-threshold-low", type=float, default=0.172,
++                   help="Box mode: matte threshold low, pixels below this become 0 (default 0.172).")
++    p.add_argument("--chroma-subtract-threshold", type=float, default=0.3,
++                   help="Subtract mode: strength threshold in 0..1. "
++                        "Alpha = 1 - clip((G - max(R,B)) / this, 0, 1). "
++                        "Lower = more aggressive key (default 0.3).")
++    p.add_argument("--chroma-subtract-gamma", type=float, default=1.0,
++                   help="Subtract mode: post-gamma on the alpha ramp (default 1.0). "
++                        "<1 pulls midtones up (softer), >1 pushes them down (harder).")
++    p.add_argument("--chroma-subtract-channel", choices=("green", "blue"), default="green",
++                   help="Subtract mode: which screen channel to subtract from (default green).")
++    p.add_argument("--keep-project", action="store_true",
++                   help="Keep project folders (Frames/, AlphaHint/, etc.) for debugging. "
++                        "Default: delete after successful inference.")
++    p.add_argument("--copy-source", action="store_true",
++                   help="Copy source videos into the project's Source/ dir. "
++                        "Default: reference in place (saves disk, faster).")
++    p.add_argument("--pool-size", type=int, default=1,
++                   help="Parallel inference engines (default: 1). Requires enough VRAM.")
++    p.add_argument("--model-resolution", type=int, choices=(1024, 2048), default=2048,
++                   help="Inference resolution (default: 2048).")
++    p.add_argument("--despill", type=float, default=0.2,
++                   help="despill_strength (0.0-1.0, default 0.2).")
++    p.add_argument("--refiner", type=float, default=None,
++                   help="Override refiner_scale (0.0-3.0, 0 = disabled).")
++    p.add_argument("--log-level", default="INFO",
++                   choices=("DEBUG", "INFO", "WARNING", "ERROR"))
++    return p.parse_args()
++
++
++def main() -> int:
++    args = parse_args()
++    logging.basicConfig(
++        level=getattr(logging, args.log_level),
++        format="%(asctime)s [%(levelname)-7s] %(name)s: %(message)s",
++        datefmt="%H:%M:%S",
++    )
++
++    # Anchor projects_root() / data dir at the repo root
++    set_app_dir(str(REPO_ROOT))
++
++    videos = collect_videos(args.input)
++    if not videos:
++        logger.error("No video files found in input")
++        return 2
++    print(f"Found {len(videos)} video(s) to process", flush=True)
++
++    output_dir = Path(args.output_dir).expanduser().resolve()
++    output_dir.mkdir(parents=True, exist_ok=True)
++
++    # Build inference params with optional overrides
++    inference_kwargs = {"despill_strength": args.despill}
++    if args.refiner is not None:
++        inference_kwargs["refiner_scale"] = args.refiner
++    params = InferenceParams(**inference_kwargs)
++    # All outputs as PNG for easy review/sharing
++    output_cfg = OutputConfig(
++        fg_format="png",
++        matte_format="png",
++        comp_format="png",
++        processed_format="png",
++    )
++
++    # Init service once; reuse for all clips (shares loaded models)
++    service = CorridorKeyService()
++    device = service.detect_device()
++    if device == "cpu":
++        logger.error("No GPU detected. BiRefNet/GVM/inference all require CUDA or MPS.")
++        return 3
++    service.set_model_resolution(args.model_resolution)
++    service.set_pool_size(args.pool_size)
++
++    try:
++        chroma_rgb = _parse_hex_color(args.chroma_key)
++    except ValueError as e:
++        logger.error(str(e))
++        return 4
++
++    def _parse_range(s: str, name: str) -> tuple[float, float]:
++        parts = s.split(",")
++        if len(parts) != 2:
++            raise ValueError(f"{name}: expected 'low,high', got {s!r}")
++        return float(parts[0]), float(parts[1])
++
++    try:
++        chroma_r_range = _parse_range(args.chroma_r_range, "--chroma-r-range")
++        chroma_g_range = _parse_range(args.chroma_g_range, "--chroma-g-range")
++        chroma_b_range = _parse_range(args.chroma_b_range, "--chroma-b-range")
++        chroma_lum_range = _parse_range(args.chroma_lum_range, "--chroma-lum-range")
++    except ValueError as e:
++        logger.error(str(e))
++        return 4
++
++    failed: list[str] = []
++    for v in videos:
++        try:
++            ok = process_video(
++                service, v,
++                alpha=args.alpha,
++                output_dir=output_dir,
++                inference_params=params,
++                output_config=output_cfg,
++                keep_project=args.keep_project,
++                copy_source=args.copy_source,
++                chroma_rgb=chroma_rgb,
++                chroma_tolerance=args.chroma_tolerance,
++                chroma_softness=args.chroma_softness,
++                chroma_mode=args.chroma_mode,
++                chroma_auto=args.chroma_auto,
++                chroma_auto_pad=args.chroma_auto_pad,
++                chroma_r_range=chroma_r_range,
++                chroma_g_range=chroma_g_range,
++                chroma_b_range=chroma_b_range,
++                chroma_lum_range=chroma_lum_range,
++                chroma_soft_range=args.chroma_soft_range,
++                chroma_threshold_low=args.chroma_threshold_low,
++                chroma_subtract_threshold=args.chroma_subtract_threshold,
++                chroma_subtract_gamma=args.chroma_subtract_gamma,
++                chroma_subtract_channel=args.chroma_subtract_channel,
++            )
++            if not ok:
++                failed.append(v.name)
++        except Exception as e:
++            logger.exception("Failed on %s: %s", v.name, e)
++            failed.append(v.name)
++
++    print(f"\nDone. {len(videos) - len(failed)}/{len(videos)} succeeded.", flush=True)
++    if failed:
++        print("Failed: " + ", ".join(failed), flush=True)
++        return 1
++    return 0
++
++
++if __name__ == "__main__":
++    import multiprocessing
++    multiprocessing.freeze_support()
++    sys.exit(main())

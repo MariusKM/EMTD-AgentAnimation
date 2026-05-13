@@ -1,0 +1,21 @@
+{
+  "mask_avg_pct": 85.0,
+  "transition_pct": 6.53,
+  "preserved_drift_mean_abs": 0.06,
+  "edit_signal_mean_abs": 39.096,
+  "edit_fidelity_mean_abs": 0.118,
+  "mask_islands": 5,
+  "warnings": [],
+  "params": {
+    "low": 10.0,
+    "high": 25.0,
+    "diff_pool_sigma": 8.0,
+    "mask_blur_sigma": 3.0,
+    "dilate_edit_px": 20
+  },
+  "paths": {
+    "L_raw": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Infantry\\out\\v2\\L10\\composite\\infantry_L10_v4_denoise.png",
+    "L_input": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Infantry\\out\\v2\\L9_5\\composite\\infantry_L9_5_v4_composited.png",
+    "output": "d:\\2025\\Stillfront\\Empire Titans\\UnitProgression\\Infantry\\out\\v2\\L10\\composite\\infantry_L10_v4_composited.png"
+  }
+}

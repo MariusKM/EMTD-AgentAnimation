@@ -1,0 +1,23 @@
+{
+  "level": "L2",
+  "variant_set": "v3_chain",
+  "variant_index": 4,
+  "seed": 866951151,
+  "request_id": "019e029a-9b47-75a0-a787-51d8b69a6447",
+  "submitted_at": "2026-05-07T13:22:27Z",
+  "prompt_file": "UnitProgression/Archer/Prompts/archer_edit_L1_to_L2.json",
+  "prompt_sha256": "4b35bfe32eeebb692160e648a5510dd4585493831e67caad72e6025ef14cf54b",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9941ca/xMbQgMeHga3ASP32lk831_L1_Base.png"
+  ],
+  "input_files": [
+    "UnitProgression/Archer/Refs/L1_Base.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "archer_L2_v4.png"
+  ]
+}

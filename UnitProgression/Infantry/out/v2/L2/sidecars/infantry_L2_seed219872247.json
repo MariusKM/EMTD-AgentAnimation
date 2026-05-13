@@ -1,0 +1,23 @@
+{
+  "level": "L2",
+  "variant_set": "reproducible",
+  "variant_index": 4,
+  "seed": 219872247,
+  "request_id": "019e03d2-be7a-7452-8d19-bbfd4099fb06",
+  "submitted_at": "2026-05-07T19:03:23.642Z",
+  "prompt_file": "Infantry/Prompts/infantry_edit_L1_to_L2.json",
+  "prompt_sha256": "ae5159eea3471703d9c351d1d995d8cd517de3625e49459dbdcc1adb193bea76",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a99481c/E56cDDSZC3WZF9cS97hJA_L1_Base.png"
+  ],
+  "input_files": [
+    "UnitProgression/Infantry/Refs/L1_Base.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "infantry_L2_v4.png"
+  ]
+}

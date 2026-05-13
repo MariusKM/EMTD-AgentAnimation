@@ -1,0 +1,80 @@
+EMTD Archer rank-progression reference sheet showing the EXACT SAME character at four progression states. Pure kit/armor progression - the character's identity (face, body, pose, framing, art style) does not change between panels. Only the leather kit accumulates from panel to panel.
+
+Layout: 2 rows x 2 columns grid (square 4-panel layout). All 4 panels at the same character scale with generous, identical padding around each character so nothing is cropped. Panels are read LEFT-TO-RIGHT, TOP-TO-BOTTOM as a rank progression (low rank -> high rank): TOP-LEFT = Panel 1, TOP-RIGHT = Panel 2, BOTTOM-LEFT = Panel 3, BOTTOM-RIGHT = Panel 4. Each panel is square. No labels, no numbers, no borders between panels.
+
+PANEL 1 (top-left) - L1 ANCHOR REFERENCE
+The baseline conscript archer. This panel establishes the canonical pose, face, framing, and color palette that every other panel must match.
+- Body: chibi proportions ~2.5-3 head, peachy-tan skin, dark-brown short hair under hood, warm-brown eyes, closed-mouth half-smirk, asymmetric brow with anatomical-LEFT brow higher, faint stubble shadow, soft rosy cheeks.
+- Hood: deep crimson-red pointed cloth hood pulled fully up with a slight forward droop at the tip, soft inner shadow framing the face.
+- Cape: matching crimson-red, attached at both shoulders, falling to knee length, plain rolled hem, soft painted vertical folds.
+- Tunic: sleeveless hip-length mustard-yellow tunic with a vertical red center panel and red side panels (the unit's heraldic livery - this MUST stay dominant on the chest in panels 2, 3, and 4 too).
+- Arms: bare biceps. Bow arm (anatomical-LEFT, viewer-RIGHT) has a single warm-brown leather wrist bracer with one cross-strap binding. Draw arm (anatomical-RIGHT, viewer-LEFT) has a white linen bandage wrap from wrist to mid-forearm.
+- Belt and X-strap: warm-brown leather X-strap chest harness running diagonally from anatomical-LEFT shoulder down to anatomical-RIGHT hip with a small brass rivet at the central crossing; single wider warm-brown leather belt with small brass rectangular buckle centered at the front.
+- Hip kit: ONE small rectangular brown leather pouch at the anatomical-RIGHT hip (viewer-LEFT side of belt). Nothing on the anatomical-LEFT hip.
+- Trousers: olive / muted forest-green knee-length.
+- Boots: chunky warm-brown leather with a darker folded ankle cuff.
+- Quiver: brown leather cylindrical back-quiver slung diagonally over the anatomical-LEFT shoulder with white-feather, red-tip arrows on pale wood-tan shafts.
+- Bow: warm wood-brown limbs, dark-brown leather grip wrap, thin pale cream bowstring, recurve limb-tip profile - held vertically in the anatomical-LEFT hand at hip height.
+
+PANEL 2 (top-right) - L2 LEATHER KIT COMPLETE (Tier 1 mid)
+Identical to Panel 1 in face, hair, hood, cape, tunic, trousers, boots, quiver, bow, X-strap, belt, and pose. Apply ONLY these visible additions:
+1. The white linen bandage on the draw arm is REPLACED by a matte warm-brown leather wrist bracer matching the bow-arm bracer in style and color, but with TWO visible cross-strap bindings (slightly more developed than the single-strap bow-arm bracer). NO white linen anywhere on the body in this panel.
+2. The single hip pouch from Panel 1 stays exactly where it is on the anatomical-RIGHT hip. NO second pouch yet (that arrives in Panel 3).
+3. Both hands remain BARE warm peachy-tan skin. The draw-arm hand is in a tight closed FIST at chest center, knuckles facing outward.
+
+PANEL 3 (bottom-left) - L3 FULL LEATHER SCOUT (Tier 1 top)
+Identical to Panel 2 in face, hood, cape, tunic, both bracers, X-strap, belt, boots, quiver, bow, and pose. Apply these FIVE visible additions on top of the L2 kit:
+1. LEATHER PAULDRON CAPS on both shoulders - small soft-leather rounded dome caps over each deltoid, slightly DARKER warm-brown leather than the bracers, with a single painted seam running over the top from front to back. Biceps remain visible BELOW the caps - only the very top of each deltoid is covered. Plain leather, no studs, no metal.
+2. QUILTED GAMBESON TEXTURE on the red panels of the tunic only - four to five evenly-spaced thin vertical quilted seams down each red panel (center panel + both side panels). The mustard-yellow base of the tunic stays SMOOTH (no quilting on the yellow). Livery still fully dominant on the chest.
+3. BROWN LEATHER GREAVES on both lower legs - matte warm-brown leather wrap-style greaves covering each lower leg from the top of the boot's folded ankle cuff up to JUST BELOW THE KNEE, sitting OVER the olive-green trousers. Each greave has a single visible cross-strap binding wrapping the calf (matching the bracer style). The greaves transition cleanly into the boot tops with no visible gap. Trousers still visible above the knee. Greaves are LEATHER, never metal.
+4. SMALL DARK-WOOD KNIFE in a brown leather sheath at the belt on the anatomical-RIGHT hip, tucked just BEHIND the existing hip pouch (pouch in front, knife sheath behind, same hip). Sheath is matte warm-brown leather, about four inches long, hanging point-down. A dark-wood knife handle protrudes upward about one and a half inches from the top of the sheath, with a small brass capstone at the very top.
+5. SECOND LEATHER HIP POUCH on the anatomical-LEFT hip (mirror-balanced to Panel 1's right-hip pouch). Slightly smaller than the original right-hip pouch, same matte warm-brown leather style with a clearly visible flap top and a small leather strap closure.
+
+PANEL 4 (bottom-right) - L3 FULL LEATHER SCOUT (Tier 1 top, repeated for consistency)
+Render Panel 4 IDENTICAL to Panel 3 in every detail. This panel exists as a stability check - the model has now committed to the full L3 leather kit, and this fourth panel proves the kit is final and stable. No additions, no changes, no further upgrades. Same pose, same kit, same face, same framing as Panel 3.
+
+ABSOLUTE RULES - apply to ALL FOUR panels:
+
+POSE LOCK (identical in every panel):
+Three-quarter view, body angled approximately 15-25 degrees to the viewer's left so the character's anatomical right side faces camera, weight planted evenly on both feet with a very slight forward lean. THE BOW ARM (anatomical-LEFT, viewer-RIGHT) hangs DOWN at his side with the elbow only slightly bent, the bow held VERTICALLY at HIP height directly in front of the hip with the hand gripping the bow's central leather grip wrap. THE DRAW ARM (anatomical-RIGHT, viewer-LEFT) is bent sharply at the elbow at roughly 90 degrees, with the FOREARM HELD HORIZONTALLY ACROSS THE CHEST at upper-chest / sternum level (parallel to the ground). The draw hand sits at the CENTER OF THE CHEST area, slightly toward the bow side, in a TIGHT CLOSED FIST shape with the KNUCKLES facing OUTWARD toward the viewer. The fist does NOT touch the bow, the bowstring, or the chest. Calm balanced HERO STANCE; NOT an active draw, NOT a nocking motion, NOT a reach.
+
+FRAMING LOCK (identical in every panel):
+Each panel is a SQUARE (1:1) and shows the COMPLETE character with NOTHING cut off - top of hood, both hands including fingertips, both feet all fully visible. Each panel has identical generous padding around the character: top of hood at ~13-14% from the top of the panel, bottom of boots at ~12% from the bottom of the panel, character roughly vertically centered (NOT bottom-anchored), character occupies approximately 75% of the panel vertical height and approximately 57% of the panel horizontal width. Within each row, the two panels share the same baseline so the character's feet line up. The two rows are identically sized and aligned. No overlap between panels.
+
+LIVERY RULE (Tier 1):
+The mustard-yellow tunic with the red center panel and red side panels is the unit's CORE EMTD identity. It must remain visibly DOMINANT on the chest in all four panels. Never covered, never replaced, never shrunk into a thin strip.
+
+ART STYLE LOCK:
+Supercell / Kingshot stylized mobile game art, hand-painted digital illustration with soft painted shading and visible brushwork, warm subsurface skin, saturated rich colors, warm shadow tones never gray, soft painted highlights on metal and leather. Clean thin black silhouette outline around the entire character in deep warm brown-black with even weight, slight thickening in shadowed recesses, slight thinning where forms catch the key light. Interior linework remains soft and value-driven, never hard black. The art style is IDENTICAL across all four panels - same line weight, same line color, same shading technique, same coloring method, same color palette, same level of detail. Do not switch styles between panels.
+
+IDENTITY LOCK:
+The character is the SAME individual in every panel - same chibi proportions, same face, same hair, same skin tone, same eye color, same expression, same hood, same cape, same tunic colors, same trousers, same boots, same quiver, same bow, same belt, same X-strap. Only the level-specific kit additions described above change between panels. Do not redesign, restyle, age, or reinterpret the character.
+
+NEGATIVE - DO NOT (applies to all panels):
+- DO NOT add scale mail, chain mail, ring mesh, fish-scale texture, or any metal armor anywhere in any panel (mail arrives at Tier 2, not in this row).
+- DO NOT add any breastplate, cuirass, plate armor, vambraces, or steel pieces.
+- DO NOT add a helmet, skullcap, steel cap, coif, or any metal headwear. The hood stays cloth in every panel.
+- DO NOT add gold trim, gold accents, gold buckle, gold limb tips on the bow, gemstones, jewels, embroidery, runes, or engraved patterns anywhere.
+- DO NOT add a tabard, surcoat, leather over-jerkin, or any waist garment over the tunic (over-jerkin arrives at L6, not in this row).
+- DO NOT add tassets, arming-skirt strips, layered hip strips, or any tier-3 hip elements.
+- DO NOT add a feather, plume, or any decoration to the hood.
+- DO NOT add a leather forehead band or any structural addition to the hood (that arrives at L4).
+- DO NOT add a bandolier, second X-strap, or arrow-clip strap (deprecated at L5/L6 anyway).
+- DO NOT restore the white linen bandage in panels 2, 3, or 4 - it is replaced by a leather bracer at L2.
+- DO NOT render either bracer as a plain leather sleeve / vambrace / arm wrap without visible cross-strap bindings - the cross-strap binding is the bracer's defining detail (single strap on bow arm, two straps on draw arm).
+- DO NOT add a sword, axe, second knife, hammer, mace, or any weapon other than the bow, the back-quiver arrows, and the new small belt knife at L3.
+- DO NOT make the L3 belt knife a sword or a long dagger - it is small, hand-length, with a dark-wood handle.
+- DO NOT add a third hip pouch in any panel - L1/L2 have one pouch, L3 has two (plus the knife sheath behind the right pouch).
+- DO NOT make the L3 pauldron caps metal, studded, or armored - they stay plain matte leather with a single seam only.
+- DO NOT make the L3 pauldrons cover the full bicep - they cap the deltoid only.
+- DO NOT make the L3 greaves metal, studded, or extended onto the thigh or over the knee - matte warm-brown leather, ankle to just-below-knee only.
+- DO NOT change the trouser color, the boot color, or the boot silhouette in any panel.
+- DO NOT change the hood color, hood shape, cape color, cape length, or cape drape across panels.
+- DO NOT change the bow shape, bow color, or grip wrap across panels - the bow is plain wood + leather grip in every panel of this Tier 1 row.
+- DO NOT change the arrow fletching colors (white feather + red tips) or the arrow count across panels.
+- DO NOT change the camera angle, the framing, or the composition between panels.
+- DO NOT crop the figure in any panel. DO NOT shift the character to the bottom edge of any panel.
+- DO NOT add labels, numbers, captions, level indicators, borders between panels, vignettes, ground shadows beyond minimal contact shadow, or any text whatsoever.
+- DO NOT change the background between panels - pure clean white background, no environmental context, no ground plane, no scenery.
+
+Pure white background across the full grid. No text, no labels, no borders, no numbering, no level indicators, no captions.

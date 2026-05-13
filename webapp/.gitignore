@@ -1,0 +1,12 @@
+node_modules/
+.next/
+data/app.db
+data/app.db-journal
+data/app.db-shm
+data/app.db-wal
+data/logs/
+# Server-rendered ramp strips, framing measurements, etc — regenerable.
+data/cache/
+.env.local
+*.tsbuildinfo
+next-env.d.ts

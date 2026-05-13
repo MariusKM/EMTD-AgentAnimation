@@ -1,0 +1,16 @@
+diff --git a/gvm_core/wrapper.py b/gvm_core/wrapper.py
+index 616fb0a..e48df9c 100644
+--- a/gvm_core/wrapper.py
++++ b/gvm_core/wrapper.py
+@@ -184,6 +184,11 @@ class GVMProcessor:
+         if new_long > _scale_cap:
+             new_long = _scale_cap
+ 
++        # torchvision Resize requires max_size strictly greater than size.
++        # For square inputs (ratio == 1.0), new_long equals _base_res — bump by 1.
++        if new_long <= _base_res:
++            new_long = _base_res + 1
++
+         max_res_param = new_long
+ 
+         transform = Compose([

@@ -1,0 +1,23 @@
+{
+  "level": "L9_5",
+  "variant_set": "reproducible",
+  "variant_index": 1,
+  "seed": 1538367217,
+  "request_id": "019e07d1-cfee-7c20-8d33-b29c547f6703",
+  "submitted_at": "2026-05-08T13:40:51.474Z",
+  "prompt_file": "Archer/Prompts/archer_edit_L9_to_L9_5.json",
+  "prompt_sha256": "f757ab33695db98ebf2cfe4f15135476e1fa4449e0a01e033525b23e811e70b7",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9963d2/bYaUIqY57pn6bWQTAkzex_archer_L9_v2_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Archer/out/v4/L9/composite/archer_L9_v2_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "archer_L9_5_v1.png"
+  ]
+}

@@ -1,0 +1,88 @@
+EMTD Archer rank-progression reference sheet showing the EXACT SAME character at four progression states. Pure kit/armor progression - the character's identity (face, body, pose, framing, art style) does not change between panels. Only the armor accumulates from panel to panel as the archer ranks up from baseline conscript (L1) through the three Scale Mail tier levels (L4 base -> L5 mid -> L6 top).
+
+Layout: 2 rows x 2 columns grid (square 4-panel layout). All 4 panels at the same character scale with generous, identical padding around each character so nothing is cropped. Panels are read LEFT-TO-RIGHT, TOP-TO-BOTTOM as a rank progression: TOP-LEFT = Panel 1, TOP-RIGHT = Panel 2, BOTTOM-LEFT = Panel 3, BOTTOM-RIGHT = Panel 4. Each panel is square. No labels, no numbers, no borders between panels.
+
+PANEL 1 (top-left) - L1 ANCHOR REFERENCE
+The baseline conscript archer. This panel establishes the canonical pose, face, framing, color palette, and identity that every other panel must match. NO scale mail in this panel - it is the pre-Tier-2 baseline.
+- Body: chibi proportions ~2.5-3 head, peachy-tan skin, dark-brown short hair under hood, warm-brown eyes, closed-mouth half-smirk, asymmetric brow with anatomical-LEFT brow higher, faint stubble shadow, soft rosy cheeks.
+- Hood: deep crimson-red pointed cloth hood pulled fully up with a slight forward droop at the tip, soft inner shadow framing the face. Plain cloth, no leather band, no rivets.
+- Cape: matching crimson-red, attached at both shoulders, falling to knee length, plain rolled hem.
+- Tunic: sleeveless hip-length mustard-yellow tunic with a vertical red center panel and red side panels (the unit's heraldic livery - this MUST stay dominant on the chest in panels 2, 3, and 4 too, never covered by armor).
+- Arms: bare biceps. Bow arm (anatomical-LEFT, viewer-RIGHT) has a single warm-brown leather wrist bracer with one cross-strap binding. Draw arm (anatomical-RIGHT, viewer-LEFT) has a white linen bandage wrap from wrist to mid-forearm.
+- Belt and X-strap: warm-brown leather X-strap chest harness running diagonally from anatomical-LEFT shoulder down to anatomical-RIGHT hip with a small brass rivet at the central crossing; single wider warm-brown leather belt with small brass rectangular buckle centered at the front.
+- Hip kit: ONE small rectangular brown leather pouch at the anatomical-RIGHT hip. Nothing on the anatomical-LEFT hip.
+- Trousers: olive / muted forest-green knee-length.
+- Boots: chunky warm-brown leather with a darker folded ankle cuff.
+- Quiver: brown leather cylindrical back-quiver slung diagonally over the anatomical-LEFT shoulder with white-feather, red-tip arrows on pale wood-tan shafts.
+- Bow: warm wood-brown limbs, dark-brown leather grip wrap, thin pale cream bowstring, recurve limb-tip profile - held vertically in the anatomical-LEFT hand at hip height. NO brass bindings, NO brass tip caps, NO gold (that arrives in panels 2, 3, 4).
+
+PANEL 2 (top-right) - L4 BASIC SCALE MAIL (Tier 2 base)
+Identical to Panel 1 in face, hair, hood color, cape, tunic colors, trousers, boots, quiver, and pose. This panel introduces SCALE MAIL for the first time. Apply these visible additions / changes:
+1. SCALE MAIL SLEEVES on both upper arms - chunky overlapping rounded scale-shaped plates in cool silver-gray steel. Each scale is a small rounded shield-shape (semi-circular at the top, slightly tapered at the bottom), arranged in horizontal rows where each row overlaps the row below by about half a scale. The texture reads as chunky, hand-painted, clearly individual scales. Sleeves cover from the shoulder cap down to the elbow, sitting OVER the bare biceps from L1. The leather wrist bracers (single-strap on bow arm, leather replacement for the bandage on draw arm with one strap) sit on the forearm BELOW the scale-mail sleeves. No bandage anywhere in this panel.
+2. SHORT SCALE-MAIL BAND AT THE TUNIC HEM - a narrow horizontal strip of the same chunky scale mail wrapping around the bottom hem of the tunic, about three to four inches tall. Sits BELOW the tunic; the tunic's mustard-yellow + red livery stays fully visible above this band. The band reads as the start of a scale-mail skirt that will grow downward in later panels.
+3. LEATHER FOREHEAD BAND ON THE HOOD - a thin warm-brown leather strap wrapping the hood across the forehead, with two or three small brass rivets evenly spaced along it. Hood color and shape unchanged.
+4. BRASS BINDING RINGS ON THE BOW - small brass rings at each end of the bow's leather grip wrap (where leather meets wood, both upper and lower side of the grip). Bow shape, color, and string unchanged otherwise.
+5. PAULDRON CAPS UPGRADE - the L3 leather pauldron caps remain in place over each deltoid (matte warm-brown leather, single seam, plain - NO studs, NO metal). Studded pauldrons arrive at L5, NOT here.
+The L3 leather greaves, second hip pouch, and small belt knife from Tier 1 are also present and unchanged. The livery on the chest remains fully dominant - scale mail does NOT cover the tunic chest.
+
+PANEL 3 (bottom-left) - L5 MID SCALE MAIL (Tier 2 mid)
+Identical to Panel 2 in face, hood, cape, tunic colors, trousers, boots, quiver, base bow, and pose. Apply these visible additions on top of the L4 kit:
+1. SCALE-MAIL COIF AT THE BACK OF THE NECK - a small panel of the same chunky overlapping scale mail wrapping the BACK and SIDES of the neck below the hood, visible where the hood opens at the cheeks/jaw. Front of the face stays open under the hood; the coif is a back-and-sides neck piece, NOT a full face cover. Same silver-gray steel scale shape language as the sleeves.
+2. STUDDED LEATHER PAULDRONS - the plain leather pauldron caps from L4 are replaced (or upgraded in place) with slightly chunkier warm-brown leather pauldron caps featuring a ring of small brass studs around the lower edge of each cap. Still leather domes (NOT plate), but now visibly studded.
+3. EXTENDED SCALE-MAIL SKIRT - the short scale-mail band at the tunic hem from L4 grows DOWNWARD into a longer scale-mail skirt extending several more inches below the tunic, ending mid-thigh. The skirt is the same chunky overlapping scale shape language. The tunic itself stays fully visible above the skirt - the skirt extends BELOW the tunic hem only, NEVER upward over the chest. Livery still fully dominant on the chest.
+4. BRASS TIP CAPS ON THE BOW - small brass caps wrapping the outermost half-inch of each bow limb tip (top and bottom). The brass grip-end bindings from L4 also remain.
+
+PANEL 4 (bottom-right) - L6 HEAVY SCALE MAIL with OVER-JERKIN and FIRST GOLD (Tier 2 top)
+Identical to Panel 3 in face, hood, cape, trousers, boots, quiver, and pose. Apply these visible additions on top of the L5 kit:
+1. SHORT BROWN LEATHER OVER-JERKIN - a sleeveless short over-jerkin in a slightly darker warm-brown leather worn OVER the tunic. The jerkin is intentionally short and partial: it sits high on the torso (covering only the upper third to half of the tunic) and is open down the center, so AT LEAST 40-50% of the tunic's red+yellow surface stays clearly visible above and below the jerkin. Visible leather grain, soft warm highlights, a single cross-strap closure at the front. The jerkin does NOT cover the whole chest, does NOT replace the tunic, does NOT shrink the tunic into a thin strip.
+2. HEAVIER SCALE-MAIL COVERAGE - the scale-mail sleeves from L4/L5 extend slightly further down (to mid-forearm under the bracers, just barely visible above the bracer cuff) and the scale-mail skirt from L5 thickens with one additional row of scales at its hem.
+3. GOLD INLAY LINE ALONG THE INNER CURVE OF EACH BOW LIMB - the FIRST gold on the bow: a thin gold inlay line painted along the inner curve of each limb (top and bottom limb), running from where the brass binding ring sits up to where the brass tip cap begins. Brass bindings and brass tip caps from L4/L5 remain.
+4. FIRST GOLD ON THE BRACER CUFFS - a thin gold trim line along the upper edge (the cuff edge nearest the elbow) of EACH leather wrist bracer. The bracers themselves stay matte warm-brown leather with their cross-strap bindings; the gold appears only as a thin trim line at the cuff edge.
+The studded leather pauldrons, scale-mail coif, scale-mail skirt, and all earlier kit remain in place.
+
+ABSOLUTE RULES - apply to ALL FOUR panels:
+
+POSE LOCK (identical in every panel):
+Three-quarter view, body angled approximately 15-25 degrees to the viewer's left so the character's anatomical right side faces camera, weight planted evenly on both feet with a very slight forward lean. THE BOW ARM (anatomical-LEFT, viewer-RIGHT) hangs DOWN at his side with the elbow only slightly bent, the bow held VERTICALLY at HIP height directly in front of the hip with the hand gripping the bow's central leather grip wrap. THE DRAW ARM (anatomical-RIGHT, viewer-LEFT) is bent sharply at the elbow at roughly 90 degrees, with the FOREARM HELD HORIZONTALLY ACROSS THE CHEST at upper-chest / sternum level (parallel to the ground). The draw hand sits at the CENTER OF THE CHEST area, slightly toward the bow side, in a TIGHT CLOSED FIST shape with the KNUCKLES facing OUTWARD toward the viewer. The fist does NOT touch the bow, the bowstring, or the chest. Calm balanced HERO STANCE; NOT an active draw, NOT a nocking motion, NOT a reach.
+
+FRAMING LOCK (identical in every panel):
+Each panel is a SQUARE (1:1) and shows the COMPLETE character with NOTHING cut off - top of hood, both hands including fingertips, both feet all fully visible. Each panel has identical generous padding around the character: top of hood at ~13-14% from the top of the panel, bottom of boots at ~12% from the bottom of the panel, character roughly vertically centered (NOT bottom-anchored), character occupies approximately 75% of the panel vertical height and approximately 57% of the panel horizontal width. Within each row, the two panels share the same baseline so the character's feet line up. The two rows are identically sized and aligned. No overlap between panels.
+
+LIVERY RULE (Tier 2 - critical):
+The mustard-yellow tunic with the red center panel and red side panels is the unit's CORE EMTD identity. It must remain visibly DOMINANT on the chest in panels 1, 2, and 3, and at least 40-50% visible in panel 4 (above and below the L6 over-jerkin). Scale mail at the tunic hem extends DOWNWARD only - it never grows upward over the chest. The over-jerkin in panel 4 is short and partial. The livery is NEVER replaced by a body coat of mail. NEVER shrunk into a thin strip. NEVER fully covered.
+
+SCALE-MAIL VISUAL SPEC (Tier 2):
+Scale mail in this row is chunky overlapping rounded scale-shaped plates in cool silver-gray steel with a soft top-down highlight on each scale and warm-brown shadow under the lower edge of each scale. Each scale is a small rounded shield-shape (semi-circular at the top, slightly tapered at the bottom), arranged in horizontal rows where each row overlaps the row below by half a scale. The texture must read as chunky, hand-painted, clearly individual scales at character-card scale. NEVER chainmail rings, NEVER fine ring mesh, NEVER fish-scale fine texture, NEVER scale that reads as small dots, NEVER a flat texture, NEVER a quilted diamond pattern.
+
+ART STYLE LOCK:
+Supercell / Kingshot stylized mobile game art, hand-painted digital illustration with soft painted shading and visible brushwork, warm subsurface skin, saturated rich colors, warm shadow tones never gray, soft painted highlights on metal and leather. Clean thin black silhouette outline around the entire character in deep warm brown-black with even weight, slight thickening in shadowed recesses, slight thinning where forms catch the key light. Interior linework remains soft and value-driven, never hard black. The art style is IDENTICAL across all four panels - same line weight, same line color, same shading technique, same coloring method, same color palette, same level of detail. Do not switch styles between panels.
+
+IDENTITY LOCK:
+The character is the SAME individual in every panel - same chibi proportions, same face, same hair, same skin tone, same eye color, same expression, same hood color, same cape, same tunic colors, same trousers, same boots. Only the level-specific kit additions described above change between panels. Do not redesign, restyle, age, or reinterpret the character.
+
+NEGATIVE - DO NOT (applies to all panels):
+- DO NOT render scale mail as chainmail rings, ring mesh, interlocking metal rings, fish-scale fine texture, small dots, or quilted diamond pattern - it is always chunky overlapping rounded individual scales.
+- DO NOT cover the tunic chest with scale mail in any panel. DO NOT replace the tunic with a body coat of mail. DO NOT shrink the tunic into a thin strip. DO NOT extend scale mail upward over the chest from the hem - mail only extends DOWNWARD below the tunic hem.
+- DO NOT add a steel breastplate, cuirass, plate vambrace, plate gauntlet, plate greave, sabaton, or any plate armor anywhere (plate arrives at Tier 3 / L7+, NOT in this row).
+- DO NOT add a closed visor, full helm, open-face steel helm, skullcap, steel cap, or any metal headwear (helm arrives at L7+, NOT in this row). The hood stays cloth in every panel.
+- DO NOT add gold accents anywhere except where the L6 panel specifically calls for them (thin gold inlay line on the inner curve of each bow limb, and thin gold trim line at the upper cuff edge of each bracer). NO gold helm trim, NO gold breastplate, NO gold belt buckle, NO fully gold bow limb, NO gold finial, NO gold tassets - those all belong to Tier 3 and L10.
+- DO NOT add tassets, arming-skirt strips, layered alternating red/yellow hip strips, or any tier-3 hip elements - the scale-mail skirt is a continuous chunky scale band, never strip-divided.
+- DO NOT restore the white linen bandage on any arm in panels 2, 3, or 4 - it was replaced by a leather bracer at L2 and the leather bracer remains under the scale-mail sleeves.
+- DO NOT render either bracer as a plain leather sleeve / vambrace / arm wrap without visible cross-strap bindings.
+- DO NOT render the scale-mail sleeves as covering the wrist bracers - the bracers sit on top of the forearm and are visible BELOW the sleeve cuff.
+- DO NOT add a bandolier, second X-strap, arrow-clip strap, or quiver strap reorganization in any panel (bandolier deprecated).
+- DO NOT add a sword, axe, second knife, hammer, mace, or any weapon other than the bow, the back-quiver arrows, and the small belt knife from L3.
+- DO NOT add gemstones, jewels, embroidery, runes, or engraved patterns on the armor or bow.
+- DO NOT make the L4 leather forehead band metal, studded with more than three rivets, gold-trimmed, or wider than a thin strap.
+- DO NOT make the L5 studded pauldrons into metal pauldrons. They stay leather domes with brass studs only.
+- DO NOT make the L5 scale-mail coif a full face cover - it is back and sides of the neck only; the front of the face stays open under the hood.
+- DO NOT make the L6 over-jerkin a full long surcoat, a full chest cover, or a closed front piece. It is short, partial, and open down the center, with the tunic visible above and below.
+- DO NOT change the trouser color, the boot color, or the boot silhouette in any panel - boots stay leather, no metal sabatons.
+- DO NOT change the hood color, hood shape, cape color, cape length, or cape drape across panels.
+- DO NOT change the bow shape, bow profile, leather grip wrap color, or arrow fletching colors (white feather + red tips) across panels. Only the brass and gold accents specified per panel are added.
+- DO NOT change the camera angle, the framing, or the composition between panels.
+- DO NOT crop the figure in any panel. DO NOT shift the character to the bottom edge of any panel.
+- DO NOT add labels, numbers, captions, level indicators, borders between panels, vignettes, ground shadows beyond minimal contact shadow, or any text whatsoever.
+- DO NOT change the background between panels.
+
+Pure white background across the full grid. No text, no labels, no borders, no numbering, no level indicators, no captions.

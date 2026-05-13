@@ -1,0 +1,23 @@
+{
+  "level": "L8",
+  "variant_set": "reproducible",
+  "variant_index": 2,
+  "seed": 1108408078,
+  "request_id": "019e0779-bdcb-7ed0-a098-4011b68feff9",
+  "submitted_at": "2026-05-08T12:04:39.369Z",
+  "prompt_file": "Archer/Prompts/archer_edit_L7_to_L8.json",
+  "prompt_sha256": "53a26188d941941e21f7645311bcd16abde1272d3a6f4478f2d92d71b03fef3b",
+  "image_urls": [
+    "https://v3b.fal.media/files/b/0a9961ba/qmiHqRArnwq5zNm0918Vq_archer_L7_v4_composited.png"
+  ],
+  "input_files": [
+    "UnitProgression/Archer/out/v4/L7/composite/archer_L7_v4_composited.png"
+  ],
+  "aspect_ratio": "1:1",
+  "resolution": "1K",
+  "num_images": 1,
+  "safety_tolerance": "5",
+  "outputs": [
+    "archer_L8_v2.png"
+  ]
+}
