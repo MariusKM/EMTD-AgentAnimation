@@ -2,7 +2,7 @@
 
 **Source image**: `Source/Heroes Stylized/Blacksmith.png`
 **Duration target**: 5s
-**Aspect**: 9:16
+**Aspect**: 1:1
 
 ---
 

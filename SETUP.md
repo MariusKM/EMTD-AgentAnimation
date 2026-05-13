@@ -18,7 +18,7 @@ This repo ships two pipelines:
 | **Git** | any | Plus **Git Bash** on Windows (provides `bash` + `usr/bin` POSIX tools). |
 | **ffmpeg** | any recent | On `PATH`. Used by frame composition + delivery encoding. |
 | **jq** | any recent | On `PATH`. Required by `seedance-video.sh` and `upload.sh`. Install with `winget install jqlang.jq` (Windows) or `brew install jq` (macOS). |
-| **CUDA-enabled GPU** | — | Required for keying (CorridorKey + BiRefNet). **Windows only** for now (the EZ-CorridorKey wrapper is Windows-tuned). |
+| **GPU for keying** | — | Required for keying (CorridorKey + BiRefNet). Windows / Linux: **NVIDIA + CUDA, 8 GB+ VRAM** recommended. macOS: **Apple Silicon (M1+)** — CorridorKey runs natively via MLX (1.5–2× faster than MPS); alpha generators (SAM2, GVM, VideoMaMa, MatAnyone2) run on MPS and are slower than CUDA. |
 
 VS C++ Build Tools (Windows) or Xcode CLT (macOS) are required to compile `better-sqlite3` during `npm install`.
 
@@ -48,11 +48,11 @@ Verify by activating the venv and running `python -c "import PIL, numpy, imageio
 
 ---
 
-## Step 2 — EZ-CorridorKey (greenscreen keying) — Windows only
+## Step 2 — EZ-CorridorKey (greenscreen keying)
 
-EZ-CorridorKey is an external tool that wraps CorridorKey + BiRefNet for headless keying. The EMTD pipeline ships two patches against it (see Step 2d). **Currently Windows-only**: on macOS / Linux you can run hero generation + composition, but keying is unsupported.
+EZ-CorridorKey is an external tool that wraps CorridorKey + BiRefNet for headless keying. The EMTD pipeline ships two patches against it (see Step 2d). Supported on **Windows** (NVIDIA + CUDA), **macOS** (Apple Silicon M1+, MLX), and **Linux** (NVIDIA + CUDA — upstream-supported but untested by EMTD).
 
-> **Already have it installed?** If EZ-CorridorKey is already present on this machine (e.g. used for another project), skip to **Step 2d (apply patches)** and point the webapp env vars in Step 4 at your existing install. Verify the install dir contains `1-install.bat` before reusing it.
+> **Already have it installed?** If EZ-CorridorKey is already present on this machine (e.g. used for another project), skip to **Step 2d (apply patches)** and point the webapp env vars in Step 4 at your existing install. Verify the install dir contains the platform-appropriate installer (`1-install.bat` on Windows, `1-install.sh` on macOS/Linux) before reusing it.
 
 ### 2a. Clone
 
@@ -67,11 +67,19 @@ If you install elsewhere, override `KEYCLIPS_PYTHON` and `KEYCLIPS_SCRIPT` in `w
 
 ### 2b. Run the upstream installer
 
-EZ-CorridorKey ships a one-click installer (`1-install.bat` on Windows) that handles managed Python 3.11, virtual environment, dependencies, **the correct PyTorch backend for your GPU** (auto-detected), verification, and **model downloads**.
+EZ-CorridorKey ships a one-click installer that handles managed Python 3.11, virtual environment, dependencies, **the correct backend for your GPU** (auto-detected: CUDA on Windows/Linux, MLX on Apple Silicon), verification, and **model downloads**.
 
+**Windows:**
 ```
 cd EZ-CorridorKey
 1-install.bat
+```
+
+**macOS / Linux:**
+```
+cd EZ-CorridorKey
+chmod +x 1-install.sh
+./1-install.sh
 ```
 
 The installer is interactive in places; let it run to completion. First-time install downloads several GB of models and can take 5–15 minutes. You do **not** need to pre-install Python — the installer provisions managed Python 3.11 itself.
@@ -97,9 +105,17 @@ If a patch fails to apply cleanly, try `git apply --3way <patch>` for tolerance,
 
 ### 2e. Verify
 
+**Windows:**
 ```
 cd <EZ-CorridorKey install dir>
 .venv\Scripts\activate
+python scripts/batch_pipeline.py --help
+```
+
+**macOS / Linux:**
+```
+cd <EZ-CorridorKey install dir>
+source .venv/bin/activate
 python scripts/batch_pipeline.py --help
 ```
 
@@ -129,7 +145,7 @@ Edit `webapp/.env.local`. The required-for-functionality vars:
 | `FAL_KEY` | Your fal.ai API key | All generation (hero seedance, unit nano-banana-pro/edit, NAFNet) |
 | `HEROANIM_ROOT` | Absolute path to `HeroAnimation/` | All hero pipeline ops (default works for the standard checkout) |
 | `BASH_BIN` | Absolute path to Git Bash | Windows only — defaults to `C:/Program Files/Git/usr/bin/bash.exe` |
-| `KEYCLIPS_PYTHON` | Path to EZ-CorridorKey's venv python | Hero keying. Defaults to `<parent-of-repo>/EZ-CorridorKey/.venv/Scripts/python.exe` (sibling-of-repo install) |
+| `KEYCLIPS_PYTHON` | Path to EZ-CorridorKey's venv python | Hero keying. Default = sibling-of-repo install. Windows: `<parent-of-repo>/EZ-CorridorKey/.venv/Scripts/python.exe`. macOS/Linux: `<parent-of-repo>/EZ-CorridorKey/.venv/bin/python`. |
 | `KEYCLIPS_SCRIPT` | Path to `batch_pipeline.py` | Hero keying. Defaults to `<parent-of-repo>/EZ-CorridorKey/scripts/batch_pipeline.py` |
 | `COMPOSE_PYTHON` | Path to the project venv python from Step 1 | Frame composition + delivery. |
 | `GDRIVE_SERVICE_ACCOUNT` | Path to your Google service-account JSON key | Drive upload (optional — see Step 5) |
@@ -167,7 +183,7 @@ npm run dev
 2. **Concepts** tab → pick a concept → **Prompts** tab → pick a prompt.
 3. Build an FFLF in the FFLF Builder (or use an existing one).
 4. **Generate** → wait for fal-seedance to complete (~60s).
-5. Click the new clip → **Key** → wait for keying (~1 min/clip; Windows only).
+5. Click the new clip → **Key** → wait for keying (~1 min/clip on CUDA; longer on Apple Silicon for the alpha-hint pass).
 6. **Align** → **Save + recompose aligned**.
 7. **Deliver (WebM 550)** → final WebM lands in `HeroAnimation/Output/<Hero>/Final/`.
 
@@ -210,7 +226,7 @@ You can also run `composite-keeper` standalone:
 | `bash: command not found` or scripts hang on Windows | `BASH_BIN` is resolving to WSL (`C:\Windows\System32\bash.exe`). Set `BASH_BIN=C:/Program Files/Git/usr/bin/bash.exe` in `webapp/.env.local`. |
 | `jq: command not found` in a job log | Install jq (`winget install jqlang.jq`) and restart the webapp dev server so the new PATH is inherited. |
 | `FAL_KEY not set` errors | Add `FAL_KEY=<your key>` to `webapp/.env.local`. Restart `npm run dev`. |
-| Keying job errors immediately | Check `KEYCLIPS_PYTHON` resolves to the EZ-CorridorKey venv on E:, and that the venv has CUDA-enabled torch installed. |
+| Keying job errors immediately | Check `KEYCLIPS_PYTHON` resolves to the EZ-CorridorKey venv (Windows: `.venv/Scripts/python.exe`, macOS/Linux: `.venv/bin/python`). On Windows/Linux confirm the venv has CUDA-enabled torch; on macOS confirm MLX is the active backend (re-run `1-install.sh` if not). |
 | `EPERM: open '.next/trace'` on dev startup | Another `next dev` process is still holding the lock. Find it (`netstat -ano \| grep :3000`) and kill it. |
 | `better-sqlite3` build fails on `npm install` | You need VS C++ Build Tools (Windows) or Xcode CLT (macOS). Install, delete `node_modules`, retry. |
 | Seedance job stuck in `running` | Click **poll** on the job in `/jobs`. The log modal shows the raw fal response. |

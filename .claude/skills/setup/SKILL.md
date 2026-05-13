@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Guide a new team member through environment setup for the EMTD pipelines via an interactive agent walkthrough. Covers Python venv, webapp install, FAL API key, Google Drive service account (optional), EZ-CorridorKey clone + patch (Windows-only), and end-to-end smoke tests. Resume mid-flow with `--step <name>`.
+description: Guide a new team member through environment setup for the EMTD pipelines via an interactive agent walkthrough. Covers Python venv, webapp install, FAL API key, Google Drive service account (optional), EZ-CorridorKey clone + patch (Windows / macOS), and end-to-end smoke tests. Resume mid-flow with `--step <name>`.
 argument-hint: [--step prereqs|venv|webapp|fal|env|corridorkey|gdrive|smoketest]
 ---
 
@@ -17,7 +17,7 @@ If `$ARGUMENTS` contains `--step <name>`, resume from that step. Otherwise start
 ## Stage 0 — Platform detection + prerequisites
 
 1. Detect host OS (`uname -s` on Unix-likes; PowerShell `$IsWindows` / Node `process.platform` on Windows). Record as one of: `windows`, `macos`, `linux`.
-2. **EZ-CorridorKey is Windows-only currently.** On macOS / Linux, warn that Stage 5 (keying) will be skipped — the team can still run hero generation + composition; only keying is unsupported on non-Windows hosts.
+2. **EZ-CorridorKey support:** Windows (NVIDIA GPU, CUDA) and macOS (Apple Silicon M1+, MLX) are both supported by the upstream installer. On Linux the upstream installer also exists but is untested by the EMTD team — proceed at the user's own risk and flag any issues. On Apple Silicon, CorridorKey inference runs natively via MLX (1.5–2× faster than MPS), but GPU-intensive alpha generators (SAM2, GVM, VideoMaMa, MatAnyone2) run on MPS and are significantly slower than CUDA — for production keying, importing pre-made alpha mattes is recommended on Mac.
 3. Verify required tools by running version-check commands:
    - `node --version` → must be 20.x or higher
    - `python --version` (or `python3 --version` on macOS/Linux) → must be 3.10+
@@ -109,24 +109,22 @@ Walk through `webapp/.env.local` and fill in each value. Auto-detect defaults wh
 - **`PROJECT_ROOT`** — auto-detect from `cwd`.
 - **`BASH_BIN`** — Windows: `C:/Program Files/Git/usr/bin/bash.exe`. macOS/Linux: `bash`.
 - **`COMPOSE_PYTHON`** / **`VENV_PYTHON`** — auto-fill from Stage 1's resolved venv path.
-- **`KEYCLIPS_PYTHON`** / **`KEYCLIPS_SCRIPT`** — leave as placeholder defaults; will be confirmed after Stage 5 if Windows. Skip on macOS/Linux.
+- **`KEYCLIPS_PYTHON`** / **`KEYCLIPS_SCRIPT`** — leave as placeholder defaults; will be confirmed after Stage 5. Path differs by platform: Windows → `<install>/.venv/Scripts/python.exe`, macOS/Linux → `<install>/.venv/bin/python`.
 - **All other vars** (`SEEDANCE_SCRIPT`, `FAL_UPLOAD_SCRIPT`, `COMPOSE_SCRIPT`, etc.) — fall through to `.env.local.example` defaults.
 
 Surface each value to the user before writing. Don't write blind.
 
 ---
 
-## Stage 5 — EZ-CorridorKey install + patch (Windows only — skip otherwise)
+## Stage 5 — EZ-CorridorKey install + patch
 
-On macOS / Linux: skip this entire stage. Note that keying requires Windows for now; advise the user to run keying on a Windows machine when needed.
-
-On Windows:
+Supported on **Windows** (NVIDIA GPU + CUDA) and **macOS** (Apple Silicon M1+, MLX). Linux is supported by upstream but untested by EMTD — proceed cautiously.
 
 ### 5a. Already installed?
 
-**Ask the user first:** *"Do you already have EZ-CorridorKey installed somewhere on this machine? If yes, paste the install path (the directory containing `1-install.bat`); if no, type `n` and the skill will clone + install fresh."*
+**Ask the user first:** *"Do you already have EZ-CorridorKey installed somewhere on this machine? If yes, paste the install path (the directory containing `1-install.bat` on Windows or `1-install.sh` on macOS/Linux); if no, type `n` and the skill will clone + install fresh."*
 
-- If the user supplies an existing path, **skip to 5d (apply patches)**. Verify the path exists and contains `1-install.bat` before proceeding; if either check fails, fall through to fresh-install.
+- If the user supplies an existing path, **skip to 5d (apply patches)**. Verify the path exists and contains the platform-appropriate installer (`1-install.bat` on Windows, `1-install.sh` on macOS/Linux) before proceeding; if either check fails, fall through to fresh-install.
 - If `n`: continue with 5b.
 
 ### 5b. Clone
@@ -141,14 +139,20 @@ git clone https://github.com/edenaion/EZ-CorridorKey.git <target>
 
 ### 5c. Run the upstream installer
 
-EZ-CorridorKey ships a one-click installer that handles managed Python 3.11, virtual environment, dependencies, **the correct PyTorch backend for the user's GPU** (auto-detected), verification, and **model downloads**. Use it instead of installing dependencies manually.
+EZ-CorridorKey ships a one-click installer that handles managed Python 3.11, virtual environment, dependencies, **the correct backend for the user's GPU** (auto-detected: CUDA on Windows/Linux, MLX on Apple Silicon), verification, and **model downloads**. Use it instead of installing dependencies manually.
 
+**Windows:**
 ```
 cd <target>
 1-install.bat
 ```
 
-(On macOS/Linux upstream supports `chmod +x 1-install.sh && ./1-install.sh`, but our pipeline is Windows-only for now — see Stage 0 platform check.)
+**macOS / Linux:**
+```
+cd <target>
+chmod +x 1-install.sh
+./1-install.sh
+```
 
 The installer is interactive in places; let it run to completion. First-time install downloads several GB of models, can take 5–15 minutes.
 
@@ -171,9 +175,17 @@ If a patch fails to apply cleanly, retry with `git apply --3way` for tolerance. 
 
 ### 5e. Verify
 
+**Windows:**
 ```
 cd <target>
 .venv\Scripts\activate
+python scripts/batch_pipeline.py --help
+```
+
+**macOS / Linux:**
+```
+cd <target>
+source .venv/bin/activate
 python scripts/batch_pipeline.py --help
 ```
 
@@ -182,8 +194,9 @@ Should print the headless CLI options. If it errors, recheck the patch step.
 ### 5f. Write paths back to webapp/.env.local
 
 Update `KEYCLIPS_PYTHON` and `KEYCLIPS_SCRIPT` in `webapp/.env.local` to point at the installed location:
-- `KEYCLIPS_PYTHON=<target>/.venv/Scripts/python.exe`
-- `KEYCLIPS_SCRIPT=<target>/scripts/batch_pipeline.py`
+- Windows: `KEYCLIPS_PYTHON=<target>/.venv/Scripts/python.exe`
+- macOS / Linux: `KEYCLIPS_PYTHON=<target>/.venv/bin/python`
+- All platforms: `KEYCLIPS_SCRIPT=<target>/scripts/batch_pipeline.py`
 
 ---
 
@@ -227,7 +240,7 @@ Walk the user through:
 5. Verify an FFLF exists for that hero (in the FFLF Builder section). If none, build one — composite the source PNG onto green background, save.
 6. **Generate** → wait ~60s for fal-seedance to complete.
 7. The new clip appears under the concept. Confirm it plays.
-8. Click the clip → **Key** (Windows only) → wait ~1 min.
+8. Click the clip → **Key** → wait ~1 min (Windows/CUDA is fastest; Apple Silicon is supported but alpha-hint passes are slower — see Stage 0 note).
 9. **Align** → **Save + recompose aligned**.
 10. **Deliver (WebM 550)** → final WebM lands in `HeroAnimation/Output/Blacksmith/Final/`.
 
@@ -243,9 +256,9 @@ The unit-progression pipeline is skill-driven, not webapp-driven. Confirm with t
 
 The skill walks through generating L2 from the locked v3 chain. Confirms fal access + composite-keeper + project venv all work end-to-end on the unit side.
 
-### 7c. macOS / Linux completion
+### 7c. Mac-specific note
 
-On non-Windows: stop after hero **Generate** confirms (Step 6 above). Report to the user that keying needs a Windows host; the rest of the pipeline (generate, deliver without keying) works on their machine.
+On Apple Silicon, the **Key** step works but is slower than CUDA for the alpha-hint pass (BiRefNet/GVM run on MPS). For production work on Mac, consider importing pre-made alpha mattes instead of regenerating per-clip. See the upstream EZ-CorridorKey docs for the alpha-import workflow.
 
 ---
 
