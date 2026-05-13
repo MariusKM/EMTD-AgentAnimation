@@ -44,7 +44,7 @@ If `--level` is provided, resume from that level (assumes earlier levels are loc
 ## Required tools / external skills
 
 - **`fal-api-skills`** — used for uploading inputs to FAL CDN: `bash .claude/skills/fal-api-skills/skills/fal-generate/scripts/upload.sh --file <path>`. Returns a `https://v3b.fal.media/...` URL. Used for L2's L1_Base content reference (chain origin, single-input), per-level keeper composites (single-input chained), and cleanup-pass inputs (ESRGAN / NAFNet).
-- **`fal-ai/nano-banana-pro/edit`** — image-to-image edit endpoint at `https://queue.fal.run/fal-ai/nano-banana-pro/edit`. The pipeline bypasses the `fal-generate/scripts` script's payload builder (which doesn't support `/edit`) and submits via direct `curl` POST — see CLAUDE.md § Part 1 § A for the pattern.
+- **`fal-ai/nano-banana-pro/edit`** — image-to-image edit endpoint at `https://queue.fal.run/fal-ai/nano-banana-pro/edit`. The pipeline bypasses the `fal-generate/scripts` script's payload builder (which doesn't support `/edit`) and submits via direct `curl` POST — see CLAUDE.md § Part 1 § A for the pattern. ⚠ **`resolution` is an enum, not a pixel count.** Valid values are exactly `"1K"`, `"2K"`, `"4K"` — passing `"1024"` / `1024` / `"2048"` returns HTTP 422 (`literal_error … Input should be '1K', '2K' or '4K'`). The 422 surfaces as the status endpoint claiming COMPLETED with `inference_time` ~0.06s (validation-failed shortcut), then 422 on the result fetch — easy to mistake for a real completion. Use `"1K"` for chain generation (model emits 1024×1024; ESRGAN 2× then brings it to 2K for the chain).
 - **`fal-ai/esrgan`** — **DEFAULT cleanup pass + L1_Base pre-flight upscaler** (LOCKED 2026-05-13; downscale dropped 2026-05-13 same-day). Endpoint at `https://queue.fal.run/fal-ai/esrgan`. Payload `{"image_url": "...", "scale": 2}`. Outputs a 2048×2048 supersample which is saved **as-is** to `_denoise.png` — the whole chain now runs at 2K (eliminates the redundant downscale-then-upscale-for-delivery round-trip; final deliverables are 2048×2048 anyway). Faster + much cheaper than NAFNet, and works well on the painted nano-banana-pro/edit artefact pattern for the vast majority of keepers. Also used at chain start to bring a non-2K `L1_Base.png` up to 2K (see Setup pre-flight). If the user reports that an ESRGAN-cleaned composite looks worse than the raw (over-sharpening, halo, brushwork wash, color drift), switch to NAFNet for that keeper.
 - **`fal-ai/nafnet/deblur`** — **FALLBACK cleanup pass** (single-input `{"image_url": "..."}` at `https://queue.fal.run/fal-ai/nafnet/deblur`). Slower and more expensive than ESRGAN but preserves painted brushwork on stubborn artefacts. Use when the user flags issues with the ESRGAN-cleaned composite. Counter-intuitive winner over `nafnet/denoise` in the original test bed. **NAFNet preserves source resolution** (2048 in → 2048 out at the current chain dim); when used as a fallback on a 2K chain, no downscale or upscale step is needed.
 - **`composite-keeper` skill** (`.claude/skills/composite-keeper/scripts/composite_keeper.py`) — diff-mask composite tool. Locked v2 thresholds (intensity, dim-invariant): `--low 10 --high 25`. 2K-era spatial defaults (doubled 2026-05-13 from the 1K seed_calibration sweep — not yet empirically recalibrated, see caveat above): `--pool 16 --mask-blur 6 --dilate 20` within-tier; bump `--dilate 30` at tier breaks (or `40` for very large edit areas like L10). See CLAUDE.md § Part 1 § L and `.claude/skills/composite-keeper/SKILL.md`.
@@ -89,6 +89,25 @@ Generate 4 distinct seeds (`S, S+1, S+2, S+3`). Build 4 payloads with `num_image
 
 ### Step 5 — POST 4 calls in parallel + record `request_id`
 Submit each payload via `curl -s -X POST https://queue.fal.run/fal-ai/nano-banana-pro/edit ...`. Capture the returned `request_id` and write it back into the sidecar.
+
+**Payload skeleton (LOCKED — every field shape matters; see CLAUDE.md § A for full discussion):**
+
+```json
+{
+  "prompt": "<from prompt JSON>",
+  "image_urls": ["<single chained-composite URL>"],
+  "num_images": 1,
+  "seed": 1234567890,
+  "aspect_ratio": "1:1",
+  "output_format": "png",
+  "resolution": "1K",
+  "safety_tolerance": "5"
+}
+```
+
+⚠ **`resolution` is a STRING ENUM** — valid values are exactly `"1K"`, `"2K"`, `"4K"`. Numeric pixel counts (`"1024"`, `1024`, `"2048"`) trip a 422 (`literal_error … Input should be '1K', '2K' or '4K'`). The failure is sneaky: status hits COMPLETED with `inference_time` ~0.06s (validation-failed shortcut), then the result endpoint returns 422 with the `detail[].msg`. If a request "completes" implausibly fast and the result fetch 422s, check `resolution` (and any other enum field) before anything else.
+
+Use `"1K"` for chain generation (model native 1024×1024 output → ESRGAN 2× brings it to 2K for the chain). `"2K"` / `"4K"` are available but bypass the documented cleanup-pass dim-bump path and have not been tuned through the rest of the pipeline.
 
 ### Step 6 — Poll until COMPLETED
 Poll status every 10–15s per request via `https://queue.fal.run/fal-ai/nano-banana-pro/requests/<id>/status`. Typical completion 30–90s.
