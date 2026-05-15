@@ -6,7 +6,9 @@ argument-hint: <UnitName> [--level <L2..L10>]
 
 # Unit Progression Pipeline
 
-Produce 10 PNG renders (`L1.png` → `L10.png` plus `L9_5.png`) showing a single EMTD unit's rank progression — same character, same pose, same scale, progressively richer armor/kit. The pipeline chains per-level deltas through `fal-ai/nano-banana-pro/edit`, with each locked keeper denoised + composited against the prior level to bound drift across the chain.
+Produce 10 PNG renders (`L1.png` → `L10.png`) showing a single EMTD unit's rank progression — same character, same pose, same scale, progressively richer armor/kit. The pipeline chains per-level deltas through `fal-ai/nano-banana-pro/edit`, with each locked keeper denoised + composited against the prior level to bound drift across the chain.
+
+An optional **L9.5 bridge level** can be inserted between L9 and L10 when the L9→L10 silhouette delta is large enough that an intermediate beat helps sell the progression (Archer is the canonical case — the cabasset brim + gold-diamond apex cap + 3-lame pauldrons land cleaner with an L9.5 stepping stone). **L9.5 is opt-in, not the default.** At Stage Setup, **ask the user** whether they want an L9.5 bridge for this unit; default to skipping. If skipped, the chain runs L1 → L10 directly with L10's chain input being the L9 composite.
 
 The Archer unit is the pilot implementation; the pipeline structure (input strategy, denoise-then-composite order, sidecars, final delivery) is generic. For new units, mirror the Archer's directory and prompt-file shape.
 
@@ -41,6 +43,8 @@ Determine the unit from `$ARGUMENTS`. If none specified, ask which unit to work 
 
 If `--level` is provided, resume from that level (assumes earlier levels are locked + composited — verify before continuing). Otherwise start from `L2` (L1 = ground truth, no generation).
 
+**Ask about the L9.5 bridge before authoring any L9 / L10 prompts** (unless resuming a unit that already has the decision recorded in its `CLAUDE.md`). Phrase the question concretely: *"Default is a 10-frame progression (L1 → L10). Do you want an L9.5 bridge level between L9 and L10 for this unit? Recommended only when the L9 → L10 silhouette delta is large enough that an intermediate beat helps sell the progression (Archer used it for the cabasset brim + gold-diamond apex; most units don't need it)."* Record the answer in the unit's `CLAUDE.md` so resumes and reruns stay consistent. If the unit dir already has prompts named `<unit>_edit_L9_to_L9_5.json` and `<unit>_edit_L9_5_to_L10.json` (Archer pattern), the bridge is already opted in.
+
 ## Required tools / external skills
 
 - **`fal-api-skills`** — used for uploading inputs to FAL CDN: `bash .claude/skills/fal-api-skills/skills/fal-generate/scripts/upload.sh --file <path>`. Returns a `https://v3b.fal.media/...` URL. Used for L2's L1_Base content reference (chain origin, single-input), per-level keeper composites (single-input chained), and cleanup-pass inputs (ESRGAN / NAFNet).
@@ -52,12 +56,12 @@ If `--level` is provided, resume from that level (assumes earlier levels are loc
 
 ## The chain — per-level loop
 
-For each level `L<n>` from L2 through L10 (and L9.5 between L9 and L10), execute the same loop. The **only differences between levels** are: (a) which prompt JSON drives it; (b) which prior composite is the chain input. **Every chained level uses a single input** (the previous level's composited keeper) per the locked single-input rule (2026-05-07) — there is no anchored / multi-input variant.
+For each level `L<n>` from L2 through L10 — optionally inserting an L9.5 bridge between L9 and L10 if the user opted in at Setup — execute the same loop. The **only differences between levels** are: (a) which prompt JSON drives it; (b) which prior composite is the chain input. **Every chained level uses a single input** (the previous level's composited keeper) per the locked single-input rule (2026-05-07) — there is no anchored / multi-input variant.
 
 ### Step 1 — Read the prompt
 Read `UnitProgression/<UnitName>/Prompts/archer_edit_L<n-1>_to_L<n>.json` (within-tier) or `archer_edit_L<n-1>_to_L<n>.json` chained tier-break variant. The prompt's `_meta.history` shows revisions; check it for any pending audit notes (e.g. "needs short-sleeve update" or stubble cleanup).
 
-**For Archer specifically** — the chain uses these prompts:
+**For Archer specifically** — the chain uses these prompts (Archer opted in to the L9.5 bridge — it's part of the locked Archer chain):
 - L2: `archer_edit_L1_to_L2.json` (single input = `Refs/L1_Base.png`, the chain origin)
 - L3: `archer_edit_L2_to_L3.json` (single input = L2 composite)
 - L4: `archer_edit_L3_to_L4.json` (single input = L3 composite — chained tier-break)
@@ -66,10 +70,11 @@ Read `UnitProgression/<UnitName>/Prompts/archer_edit_L<n-1>_to_L<n>.json` (withi
 - L7: `archer_edit_L6_to_L7.json` (single input = L6 composite — chained tier-break)
 - L8: `archer_edit_L7_to_L8.json` (single input = L7 composite)
 - L9: `archer_edit_L8_to_L9.json` (single input = L8 composite)
-- L9.5: `archer_edit_L9_to_L9_5.json` (single input = L9 composite)
-- L10: `archer_edit_L9_5_to_L10.json` (single input = L9.5 composite)
+- L9.5: `archer_edit_L9_to_L9_5.json` (single input = L9 composite) — **opt-in bridge** (Archer used it; new units default to skipping)
+- L10 (with L9.5): `archer_edit_L9_5_to_L10.json` (single input = L9.5 composite)
+- L10 (without L9.5, default for new units): `<unit>_edit_L9_to_L10.json` (single input = L9 composite)
 
-For new units, the same pattern: L1 = ground truth, L2 chains from L1, then each level chains from the previous composite — always single-input. Anchored tier-break prompts (`archer_edit_L1_to_L<n>.json`) are deprecated and should not be authored for new units.
+For new units, the same pattern: L1 = ground truth, L2 chains from L1, then each level chains from the previous composite — always single-input. **Default to skipping L9.5** unless the user opted in at Setup. Anchored tier-break prompts (`archer_edit_L1_to_L<n>.json`) are deprecated and should not be authored for new units.
 
 ### Step 2 — Set up output dirs
 ```
@@ -218,7 +223,7 @@ Repeat the loop for the next level.
 
 ## Final delivery
 
-After the full L1–L10 (+ L9.5) chain is locked, assemble the deliverable hand-off:
+After the full L1–L10 chain is locked (with L9.5 inserted only if the user opted in at Setup), assemble the deliverable hand-off:
 
 ```python
 import os, shutil
@@ -228,11 +233,13 @@ base = 'UnitProgression/<UnitName>'
 final = f'{base}/out/v<N>/Final'
 os.makedirs(final, exist_ok=True)
 
+# Default: 10-frame progression (L1..L10). Add the ('L9_5', ...) tuple in the
+# right slot only if the user opted in to the L9.5 bridge at Setup.
 levels = [
     ('L1',   f'{base}/Refs/L1_Base.png'),
     ('L2',   f'{base}/out/v<N>/L2/composite/archer_L2_v<keeper>_composited.png'),
     # ... L3 through L9 ...
-    ('L9_5', f'{base}/out/v<N>/L9_5/composite/archer_L9_5_v<keeper>_composited.png'),
+    # ('L9_5', f'{base}/out/v<N>/L9_5/composite/archer_L9_5_v<keeper>_composited.png'),  # only if opted in
     ('L10',  f'{base}/out/v<N>/L10/composite/archer_L10_v<keeper>_composited.png'),
 ]
 for label, src in levels:
@@ -249,7 +256,7 @@ canvas.resize((256 * len(imgs), 256), Image.LANCZOS).save(f'{final}/progression_
 
 The `Final/` dir is the deliverable hand-off. Per-variant suffixes and `_composited` qualifiers are dropped so the rank progression is browsable at a glance. See CLAUDE.md § Part 4 "Final delivery" for the canonical recipe.
 
-**Confirm before omitting a level from delivery.** The chain produces all locked levels (L1–L10 + L9.5). If the user wants a subset (e.g. drop L9.5 to deliver a clean 10-frame progression), confirm before omitting — the bridge level still chains the L9 → L10 transition; it just doesn't appear in the deliverable.
+**Confirm before omitting a level from delivery.** The chain produces L1–L10 by default, plus L9.5 only when the user opted in at Setup. If the user wants to drop L9.5 from delivery on a unit where it WAS chained (e.g. to ship a clean 10-frame progression), confirm before omitting — the bridge level still chained the L9 → L10 transition; it just won't appear in the deliverable. On units where L9.5 was skipped from the start there is nothing to omit.
 
 ## Final delivery — upload to Drive
 
