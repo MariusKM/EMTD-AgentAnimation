@@ -191,9 +191,14 @@ function goToClipHref(j: Job): string | null {
     const base = String(j.result.outputMp4).split(/[\\/]/).pop() ?? "";
     clipName = base.replace(/\.mp4$/i, "") || null;
   }
-  if (!clipName) return null;
-  const conceptId = j.concept_id ?? clipName.split("_")[0];
-  const qs = new URLSearchParams({ concept: conceptId, clip: clipName });
+  const conceptId = j.concept_id ?? (clipName ? clipName.split("_")[0] : null);
+  if (!conceptId) return null;
+  // For seedance jobs the clip isn't keyed yet, so opening the files modal
+  // would error. Send only the concept so the hero workspace selects it
+  // without auto-opening the explorer. key+compose jobs still pass `clip=`
+  // so users land on the files view of the just-keyed clip.
+  const qs = new URLSearchParams({ concept: conceptId });
+  if (clipName && j.kind !== "seedance") qs.set("clip", clipName);
   return `/heroes/${encodeURIComponent(j.hero_id)}?${qs.toString()}`;
 }
 

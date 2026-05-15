@@ -147,10 +147,17 @@ export function HeroScreenPreview({
   // clip changes; "Save" persists back to clip_meta.
   const [pendingFade, setPendingFade] = useState(0);
   const [pendingOverflow, setPendingOverflow] = useState<number | null>(null);
+  // Only re-seed pendingFade/pendingOverflow when the selected clip actually
+  // changes. The parent polls every 6s which gives us a fresh `singleOptions`
+  // array reference each tick — depending on it here would clobber unsaved
+  // slider edits mid-session.
+  const lastSeededClipRef = useRef<string | null>(null);
   useEffect(() => {
+    if (lastSeededClipRef.current === singleClipName) return;
     const opt = singleOptions.find((o) => o.clip.name === singleClipName);
     setPendingFade(opt?.clip.meta.edgeFade ?? 0);
     setPendingOverflow(opt?.clip.meta.overflowSize ?? null);
+    lastSeededClipRef.current = singleClipName;
   }, [singleClipName, singleOptions]);
 
   // --- Playlist: list of (src, loops, edgeFade, overflowScale) per mode ---

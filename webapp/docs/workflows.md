@@ -61,7 +61,7 @@ Tips:
    - `running` stage `submitted` (with `requestId` in the result) → fal is processing
    - The poller (every 10s) updates the log with `[poll] state=IN_PROGRESS` lines
    - `done` stage `completed` → the new `.mp4` lands at `Output/<Hero>/Animations/<ConceptID>_<nextIter>.mp4`
-6. Switch back to the hero workspace; the new clip appears under the concept (auto-refreshes every 6s).
+6. Switch back to the hero workspace; the new clip appears under the concept (auto-refreshes every 6s). On a `done` seedance job the `→ go to clip` action navigates back to the hero workspace with the concept pre-selected — it intentionally does **not** open the files modal because the clip isn't keyed yet. For `done` `key+compose` jobs the same action opens the files modal on the just-keyed clip.
 
 If the job fails, the result includes a `stage` (where it failed) and a stderr/stdout tail. Open the log modal from `/jobs` for the full output.
 
@@ -127,6 +127,8 @@ Originals (`<ClipName>_fg_alpha.{mov,mp4}` and `<ClipName>_comp.mp4`) are never 
 **Verifying alignment visually:** once a clip has an aligned output, the right-column preview automatically plays the aligned video (it falls back to the un-aligned preview when no aligned variant exists). A small **Show alignment** button appears next to the rating stars — toggle it to overlay `character-alignment_<W>x<H>_overlay.png` (lines only, transparent elsewhere) on top of the video. If the character's eye stays on the pink Eye Level line and feet stay on the Ground line across the clip, alignment is correct.
 
 **Soft-edge mask for clips that overshoot the slot.** Some power moves reach past the in-game character slot — e.g. a sword raised above the hero. Open the preview modal in **Single** mode, pick the offending clip, drag the **Edge fade** slider in the right panel until the overshoot fades cleanly, then **Save + re-deliver**. The mask is per-clip in `clip_meta.edge_fade` and gets baked into the WebM by `deliver_webm.py --edge-fade <F>`, so the in-game player sees the soft edge directly. Other clips on the hero stay untouched. In **Sequence** mode the per-clip masks just play through as stored — no editing UI; switch to Single to tune.
+
+The Edge fade and Overflow size sliders persist across the parent's 6s hero-data poll — they only reseed from `clip_meta` when you switch to a different clip. So you can park the modal on a clip, dial the fade, pause playback, and the value won't snap back while you tune.
 
 **Overflow padding for clips whose action just needs more canvas.** If you'd rather *show* the overshoot instead of fading it (e.g. King's raised sword should still be visible above the slot), set **Overflow size** to a larger value (768, 896, 1024) in the same Delivery panel and re-deliver. The WebM gets encoded at that outer resolution with the central 550×550 region holding the actual aligned content and transparent padding around it. The in-game engine renders the larger asset positioned on the same slot — the overshoot extends past the slot edges naturally. Stored per-clip in `clip_meta.overflow_size`. Edge fade and overflow can be combined on the same clip.
 
